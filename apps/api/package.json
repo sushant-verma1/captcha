@@ -1,0 +1,26 @@
+{
+  "name": "@tracecaptcha/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@tracecaptcha/captcha-engine": "workspace:*",
+    "@tracecaptcha/risk-engine": "workspace:*",
+    "@tracecaptcha/shared-types": "workspace:*",
+    "fastify": "^5.2.1",
+    "jose": "^6.2.17",
+    "pg": "^8.23.1",
+    "redis": "^4.7.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.23.1",
+    "tsx": "^4.19.2"
+  }
+}

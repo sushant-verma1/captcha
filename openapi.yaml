@@ -1,0 +1,496 @@
+openapi: 3.1.1
+info:
+  title: TraceCAPTCHA API
+  version: 0.1.0
+  description: |
+    TraceCAPTCHA provides an owned drawing CAPTCHA and a risk decision service.
+    Browser integrations use a public site key. Server integrations use a secret key.
+    The URL major version is the compatibility boundary. Within /v1, TraceCAPTCHA
+    may add endpoints or optional fields; clients must ignore response fields they do
+    not recognize. Removing or changing fields, authentication, status semantics,
+    validation constraints, or existing decision values requires a new URL major version.
+servers:
+  - url: https://api.tracecaptcha.example/v1
+    description: Production placeholder
+  - url: http://127.0.0.1:3000/v1
+    description: Local development
+tags:
+  - name: Decisions
+  - name: Challenges
+  - name: Tokens
+  - name: Observability
+paths:
+  /decisions:
+    post:
+      tags: [Decisions]
+      operationId: createDecision
+      summary: Evaluate whether an action requires verification
+      security:
+        - SiteKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DecisionRequest"
+      responses:
+        "200":
+          description: A policy decision for the protected action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DecisionResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/InvalidSiteKey"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /challenges:
+    post:
+      tags: [Challenges]
+      operationId: createChallenge
+      summary: Create a drawing challenge for an approved action
+      security:
+        - SiteKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/BrowserOrigin"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateChallengeRequest"
+      responses:
+        "201":
+          description: A short-lived challenge with public render data.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChallengeResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/InvalidSiteKey"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /challenges/{challengeId}/verify:
+    post:
+      tags: [Challenges]
+      operationId: verifyChallenge
+      summary: Submit a trace for server-side verification
+      description: >
+        The server authenticates the browser site and origin, atomically consumes
+        the active challenge before scoring, and returns a token only for an
+        accepted trace. The returned browser token is not authorization until a
+        customer backend verifies and consumes it with a private credential.
+      parameters:
+        - $ref: "#/components/parameters/BrowserOrigin"
+      security:
+        - SiteKeyAuth: []
+      parameters:
+        - name: challengeId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyChallengeRequest"
+      responses:
+        "200":
+          description: The challenge verification result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerificationResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/InvalidSiteKey"
+        "404":
+          $ref: "#/components/responses/ChallengeNotFound"
+        "409":
+          $ref: "#/components/responses/ChallengeConsumed"
+        "410":
+          $ref: "#/components/responses/ChallengeExpired"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /tokens/verify:
+    post:
+      tags: [Tokens]
+      operationId: verifyToken
+      summary: Verify a verification token from a customer backend
+      description: "The authenticated private server credential determines the expected customer, site, and site-ID audience. Invalid tokens return only valid: false."
+      security:
+        - SecretKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyTokenRequest"
+      responses:
+        "200":
+          description: The token verification result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenVerificationResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/InvalidSecretKey"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /observability/false-positive-reports:
+    post:
+      tags: [Observability]
+      operationId: reportFalsePositive
+      summary: Record an aggregate false-positive report from a customer backend
+      description: >
+        Records one non-identifying aggregate report for the authenticated site
+        and protected action. The request cannot include a user, session, trace,
+        token, score, rule, or other event identifier.
+      security:
+        - SecretKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FalsePositiveReportRequest"
+      responses:
+        "202":
+          description: The aggregate report was accepted.
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/InvalidSecretKey"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+components:
+  parameters:
+    BrowserOrigin:
+      name: Origin
+      in: header
+      required: true
+      description: Browser origin whose hostname must match a registered web hostname for the site key. Native app attestation is not supported by this endpoint.
+      schema:
+        type: string
+        format: uri
+  securitySchemes:
+    SiteKeyAuth:
+      type: apiKey
+      in: header
+      name: X-TraceCAPTCHA-Site-Key
+      description: Public key that identifies a registered site.
+    SecretKeyAuth:
+      type: apiKey
+      in: header
+      name: X-TraceCAPTCHA-Secret-Key
+      description: Server-only key used for token verification and authorized aggregate observability reports.
+  responses:
+    ValidationError:
+      description: The request does not match the API contract.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    InvalidSiteKey:
+      description: The site key is missing, invalid, revoked, or does not match the request origin.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    InvalidSecretKey:
+      description: The server credential is missing, invalid, or revoked.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ChallengeNotFound:
+      description: The challenge does not exist for this site.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ChallengeConsumed:
+      description: The challenge has already been used.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ChallengeExpired:
+      description: The challenge has expired.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    RateLimited:
+      description: The request was rate-limited.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+            minimum: 1
+          description: Seconds before another attempt may be made.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ServiceUnavailable:
+      description: TraceCAPTCHA cannot complete verification because a required service is temporarily unavailable. A client may retry or follow its customer's explicit fallback policy; an unavailable or unverifiable token is not valid.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error:
+              code: service_unavailable
+              message: Verification is temporarily unavailable. Please try again.
+  schemas:
+    DecisionRequest:
+      type: object
+      additionalProperties: false
+      required: [action]
+      properties:
+        action:
+          type: string
+          enum: [signup, login, password_reset, otp_request]
+          example: signup
+        sessionId:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: sess_01HVK8G5M6A3
+        context:
+          type: object
+          additionalProperties: false
+          properties:
+            attemptId:
+              type: string
+              maxLength: 255
+      examples:
+        signup:
+          value:
+            action: signup
+            sessionId: sess_01HVK8G5M6A3
+            context:
+              attemptId: attempt_01HVK8M89B7
+    DecisionResponse:
+      type: object
+      additionalProperties: false
+      required: [decision, decisionId]
+      properties:
+        decisionId:
+          type: string
+          example: dec_01HVK9M8TT5
+        decision:
+          $ref: "#/components/schemas/DecisionType"
+        reasonCategory:
+          type: string
+          description: A coarse, public category. Internal thresholds are never returned.
+          example: elevated_request_rate
+        expiresAt:
+          type: string
+          format: date-time
+          description: Present when the decision authorizes a challenge.
+    CreateChallengeRequest:
+      type: object
+      additionalProperties: false
+      required: [action]
+      properties:
+        action:
+          type: string
+          enum: [signup, login, password_reset, otp_request]
+        sessionId:
+          type: string
+          minLength: 1
+          maxLength: 255
+        decisionId:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Required when a site's policy requires a prior decision.
+    ChallengeResponse:
+      type: object
+      additionalProperties: false
+      required: [challengeId, action, renderData, expiresAt]
+      properties:
+        challengeId:
+          type: string
+          example: ch_01HVKAV8D2G
+        action:
+          type: string
+          enum: [signup, login, password_reset, otp_request]
+          example: signup
+        renderData:
+          $ref: "#/components/schemas/ChallengeRenderData"
+        expiresAt:
+          type: string
+          format: date-time
+    ChallengeRenderData:
+      type: object
+      additionalProperties: false
+      required: [version, canvas, target]
+      properties:
+        version:
+          type: integer
+          minimum: 1
+          example: 1
+        canvas:
+          type: object
+          additionalProperties: false
+          required: [width, height]
+          properties:
+            width:
+              type: integer
+              minimum: 120
+              maximum: 1_024
+              example: 320
+            height:
+              type: integer
+              minimum: 120
+              maximum: 1_024
+              example: 220
+        target:
+          type: object
+          additionalProperties: false
+          required: [kind, displayPath]
+          properties:
+            kind:
+              type: string
+              enum: [polygon]
+            displayPath:
+              type: array
+              minItems: 3
+              maxItems: 32
+              items:
+                $ref: "#/components/schemas/Point"
+    VerifyChallengeRequest:
+      type: object
+      additionalProperties: false
+      required: [action, trace]
+      properties:
+        action:
+          type: string
+          enum: [signup, login, password_reset, otp_request]
+        trace:
+          type: array
+          minItems: 2
+          maxItems: 2_000
+          items:
+            $ref: "#/components/schemas/TracePoint"
+    VerificationResponse:
+      type: object
+      additionalProperties: false
+      required: [decision]
+      properties:
+        decision:
+          $ref: "#/components/schemas/DecisionType"
+        verificationToken:
+          type: string
+          description: Present only for an accepted verification. A compact Ed25519-signed JWT/JWS verification token; it must be verified server-to-server and is not a browser authorization result.
+        expiresAt:
+          type: string
+          format: date-time
+          description: Present only with verificationToken.
+        reasonCategory:
+          type: string
+    VerifyTokenRequest:
+      type: object
+      additionalProperties: false
+      required: [token, expectedAction]
+      properties:
+        token:
+          type: string
+          minLength: 1
+          description: Compact Ed25519-signed TraceCAPTCHA verification JWT/JWS bound to the authenticated credential's site-ID audience.
+        expectedAction:
+          type: string
+          enum: [signup, login, password_reset, otp_request]
+        consume:
+          type: boolean
+          default: true
+          description: When true, a valid token is atomically consumed.
+    TokenVerificationResponse:
+      type: object
+      additionalProperties: false
+      required: [valid]
+      properties:
+        valid:
+          type: boolean
+        action:
+          type: string
+          enum: [signup, login, password_reset, otp_request]
+          description: Present only when valid is true.
+    FalsePositiveReportRequest:
+      type: object
+      additionalProperties: false
+      required: [action]
+      description: Contains no user, session, trace, token, score, rule, or event identifier.
+      properties:
+        action:
+          type: string
+          enum: [signup, login, password_reset, otp_request]
+        expiresAt:
+          type: string
+          format: date-time
+          description: Present only when valid is true.
+    DecisionType:
+      type: string
+      enum: [allow, challenge, retry, cooldown, block]
+    Point:
+      type: object
+      additionalProperties: false
+      required: [x, y]
+      properties:
+        x:
+          type: number
+        y:
+          type: number
+    TracePoint:
+      type: object
+      additionalProperties: false
+      required: [x, y, t]
+      properties:
+        x:
+          type: number
+          minimum: 0
+          maximum: 1_024
+        y:
+          type: number
+          minimum: 0
+          maximum: 1_024
+        t:
+          type: integer
+          minimum: 0
+          maximum: 120_000
+          description: Elapsed milliseconds from trace start. The first point must be 0 and subsequent points must not decrease.
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              example: validation_error
+            message:
+              type: string
+              example: The request contains invalid fields.

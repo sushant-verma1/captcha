@@ -1,0 +1,21 @@
+{
+  "name": "tracecaptcha",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Adaptive drawing CAPTCHA provider and risk-based verification wrapper.",
+  "packageManager": "pnpm@12.3.4",
+  "engines": {
+    "node": ">=22.14.0"
+  },
+  "scripts": {
+    "build": "pnpm --recursive --if-present run build",
+    "typecheck": "pnpm --filter @tracecaptcha/shared-types run build && pnpm --filter @tracecaptcha/captcha-engine run build && pnpm --recursive --if-present run typecheck",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "prettier": "^3.5.1",
+    "typescript": "^5.7.3"
+  }
+}
