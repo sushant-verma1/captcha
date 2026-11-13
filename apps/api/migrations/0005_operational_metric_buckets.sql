@@ -1,5 +1,9 @@
 BEGIN;
 
+ALTER TABLE tracecaptcha_sites
+  ADD CONSTRAINT tracecaptcha_sites_id_customer_unique
+  UNIQUE (id, customer_id);
+
 CREATE TABLE tracecaptcha_operational_metric_buckets (
   bucket_start TIMESTAMPTZ NOT NULL,
   customer_id UUID NOT NULL REFERENCES tracecaptcha_customers (id) ON DELETE RESTRICT,

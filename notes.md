@@ -597,6 +597,24 @@ Do not add agent names, `Co-authored-by` lines, or personal attribution.
 
 ## Decision log template
 
+## 2026-11-13 — Staging PostgreSQL migrations applied and verified
+
+- Contributor role: deployment assistance
+- Area: Render staging PostgreSQL
+- What changed: the user applied migrations `0001` through `0007` to the Render staging database. The first `0005` attempt rolled back because of its missing referenced composite uniqueness constraint; after the local source repair, `0005`, `0006`, and `0007` completed successfully. A read-only Render MCP check confirmed the customers, credentials, policies, and aggregate-metric tables exist.
+- Why: API readiness alone does not prove that credential, policy, rate-limit, and aggregate-metric tables are available. The repaired transactional migration allows fresh deployments to create the scoped aggregate metrics foreign key correctly.
+- Verification: user-provided `psql` output confirmed each migration transaction committed. Render MCP read-only schema query confirmed all required table names. No migration was applied by the agent, and no local service, browser, database, port, or listener was started.
+- Follow-up: configure Render Key Value with `noeviction`, configure the staging API with private datastore URLs and an Ed25519 signing key, then bootstrap the initial customer/site/credentials/policy data. The source migration repair still needs a user-authorized Git commit and push for future clean deployments.
+
+## 2026-11-13 — Aggregate metric migration foreign-key repair
+
+- Contributor role: implementation
+- Area: PostgreSQL deployment migration
+- What changed: updated unapplied migration `0005_operational_metric_buckets.sql` to add a unique `(id, customer_id)` constraint to `tracecaptcha_sites` before creating the aggregate metrics table. This is the referenced key required by the table's scoped site/customer foreign key.
+- Why: applying `0005` to the Render database failed and rolled back because PostgreSQL requires the referenced column pair to have a unique or primary-key constraint. Migrations `0001` through `0004` had already completed; `0005` did not partially apply because it is transactional.
+- Verification: API TypeScript no-emit typecheck and emitting build passed; targeted Prettier checks passed for TypeScript and Markdown. The configured formatter has no SQL parser, so the repaired migration was manually reviewed. The migration is not applied by the agent; the user must rerun it through the existing trusted `psql` session, then continue `0006` and `0007`.
+- Follow-up: after all migrations complete, verify the schema through Render MCP and bootstrap the initial customer, site, credentials, and policy before configuring the API. P4.3, P9.5, and P10.1 remain [~].
+
 ## 2026-11-13 — API listener lifecycle corrected for deployment
 
 - Contributor role: implementation
@@ -605,6 +623,15 @@ Do not add agent names, `Co-authored-by` lines, or personal attribution.
 - Why: Render logs showed the API bound successfully to `0.0.0.0:10000` and then exited immediately because the unconditional cleanup closed the listener. This was a lifecycle defect, not a browser or authorization behavior change.
 - Verification: API TypeScript no-emit typecheck and emitting build passed; targeted Prettier checks passed for the runtime source and project records. No local service, database, browser, port, listener, or migration was started or applied.
 - Follow-up: the Render environment still needs its protected connection URLs and Ed25519 signing key, all SQL migrations, and customer/site/credential/policy bootstrap before protected API routes can operate. P4.3, P9.5, and P10.1 remain [~] pending their documented human QA and calibration gates.
+
+## 2026-11-13: Initial tenant bootstrap CLI added
+
+- Contributor role: implementation
+- Area: staging provisioning workflow
+- What changed: added the server-only `pnpm --filter @tracecaptcha/api run bootstrap` command. It requires explicit confirmation and trusted operator-supplied configuration, refuses to run after any customer exists, takes a PostgreSQL advisory transaction lock, and atomically creates the initial customer, environment, site, exact lowercase web hostname, scrypt-hashed public/private credential records, and the four active version-one action policies. It uses the existing credential issuer rather than constructing hashes in SQL. Credential material is written only to a caller-selected new absolute-path secret file with exclusive creation and is not printed to stdout or application logs; a credential-file write failure rolls back the database transaction.
+- Why: the deployed API cannot authenticate browser or server integrations without an initial tenant/site/key/policy set, but provisioning must not create a browser-reachable administrative path or leak server credentials through logs.
+- Verification: focused bootstrap unit tests passed for successful transactional provisioning, existing-customer refusal, credential-file failure rollback, explicit confirmation, and hostname validation. The full compiled API unit suite passed (79 tests). API TypeScript no-emit typecheck and emitting build passed; targeted Prettier and diff-whitespace checks passed. No local service, database, browser, port, listener, or migration was started or applied.
+- Follow-up: a trusted operator must run the built command exactly once against staging, store the generated private server credential in the customer backend's secret manager, configure only the public site key in browser integration, and securely remove the transient output file after transfer. Do not paste connection URLs or generated credentials into chat. P4.3 and P9.5 remain [~] pending documented human browser/accessibility QA; P10.1 remains [~] pending calibration and release-gate scenarios.
 
 ### YYYY-MM-DD — Short decision title
 

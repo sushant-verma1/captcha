@@ -534,11 +534,13 @@ A task may be split further if it cannot be reviewed or completed as one focused
 
 ## Current implementation status update
 
-- P9.1 is [x]: the authenticated challenge-verification service applies configured site/action and network rate limits before it consumes a challenge. Its policy migration must be applied through the approved deployment process.
+- P9.1 is [x]: the authenticated challenge-verification service applies configured site/action and network rate limits before it consumes a challenge. Its policy migration is applied to the staging PostgreSQL deployment.
 - P9.4 remains [~]: decision, challenge creation/replay, verification completion/retry, and observed-expiry counts are wired; accepted/retry traces add aggregate duration totals. A non-identifying abandonment source is still required.
 - P4.3 and P9.5 remain [~] pending documented human browser, device, keyboard, touch/stylus, focus, and screen-reader QA.
 - P10.1 remains [~]: server verification now exists, but provisional thresholds require calibration and the human release-gate scenarios remain pending.
 - The API runtime remains alive after a successful listener startup; startup-failure cleanup remains contained in the error path. Render deployment configuration and database/site bootstrap remain operational work, not release-gate completion.
+- The aggregate-metric migration supplies the composite site/customer uniqueness required by its scoped foreign key; it must be applied with the remaining deployment migrations before metrics are available.
+- A server-only one-time bootstrap CLI now creates the first customer, environment, site, allowed web hostname, credential pair, and active version-one policies in one transaction. It remains an operator workflow: it must be run from a trusted environment with an explicitly confirmed configuration and a secure new credential-output file; it is not a browser or HTTP API.
 
 ## Success measures
 
