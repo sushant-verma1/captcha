@@ -597,6 +597,15 @@ Do not add agent names, `Co-authored-by` lines, or personal attribution.
 
 ## Decision log template
 
+## 2026-11-13 — API listener lifecycle corrected for deployment
+
+- Contributor role: implementation
+- Area: deployment runtime lifecycle
+- What changed: moved API server, Redis, and PostgreSQL cleanup out of an unconditional `finally` block and into the startup-error path. A successful `server.listen` call now leaves the Node process running; a failed startup still closes any resources that opened.
+- Why: Render logs showed the API bound successfully to `0.0.0.0:10000` and then exited immediately because the unconditional cleanup closed the listener. This was a lifecycle defect, not a browser or authorization behavior change.
+- Verification: API TypeScript no-emit typecheck and emitting build passed; targeted Prettier checks passed for the runtime source and project records. No local service, database, browser, port, listener, or migration was started or applied.
+- Follow-up: the Render environment still needs its protected connection URLs and Ed25519 signing key, all SQL migrations, and customer/site/credential/policy bootstrap before protected API routes can operate. P4.3, P9.5, and P10.1 remain [~] pending their documented human QA and calibration gates.
+
 ### YYYY-MM-DD — Short decision title
 
 - Contributor role:

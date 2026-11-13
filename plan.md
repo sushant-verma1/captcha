@@ -538,6 +538,7 @@ A task may be split further if it cannot be reviewed or completed as one focused
 - P9.4 remains [~]: decision, challenge creation/replay, verification completion/retry, and observed-expiry counts are wired; accepted/retry traces add aggregate duration totals. A non-identifying abandonment source is still required.
 - P4.3 and P9.5 remain [~] pending documented human browser, device, keyboard, touch/stylus, focus, and screen-reader QA.
 - P10.1 remains [~]: server verification now exists, but provisional thresholds require calibration and the human release-gate scenarios remain pending.
+- The API runtime remains alive after a successful listener startup; startup-failure cleanup remains contained in the error path. Render deployment configuration and database/site bootstrap remain operational work, not release-gate completion.
 
 ## Success measures
 

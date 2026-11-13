@@ -101,7 +101,7 @@ try {
 } catch (error) {
   server.log.error(error);
   process.exitCode = 1;
-} finally {
+
   if (server.server.listening) {
     await server.close();
   }
