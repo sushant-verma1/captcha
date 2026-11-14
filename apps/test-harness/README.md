@@ -9,6 +9,11 @@ the same-origin test backend. The backend derives the expected action from its
 own configuration, sends `consume: true` to TraceCAPTCHA, and reports success
 only after the API atomically verifies and consumes the token.
 
+The harness permits inline styles because the existing Web Component creates
+styles in its Shadow DOM and sets canvas sizing styles at runtime. It keeps
+scripts nonce-restricted and sends `frame-ancestors 'none'` in the HTTP Content
+Security Policy response header.
+
 ## Configuration
 
 Set these server-side environment variables when deploying the harness. Do not

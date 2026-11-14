@@ -574,6 +574,7 @@ the production release gate.
 - The aggregate-metric migration supplies the composite site/customer uniqueness required by its scoped foreign key; it must be applied with the remaining deployment migrations before metrics are available.
 - A server-only one-time bootstrap CLI now creates the first customer, environment, site, allowed web hostname, credential pair, and active version-one policies in one transaction. It remains an operator workflow: it must be run from a trusted environment with an explicitly confirmed configuration and a secure new credential-output file; it is not a browser or HTTP API.
 - P10.0 is the next planned work: build a deliberately minimal test frontend and trusted verification handler after choosing one real test-frontend hostname. Do not bootstrap an arbitrary hostname merely to unblock implementation.
+- The P10.0 harness is deployed at `https://tracecaptcha-test-harness.onrender.com` in Singapore. Its public-origin configuration now matches that URL, but its site/server credentials are intentional non-operational placeholders until the one-time bootstrap registers this hostname and creates the real credential pair. Do not use it for authorization or release-gate testing yet.
 
 ## Success measures
 

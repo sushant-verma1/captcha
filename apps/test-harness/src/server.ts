@@ -39,19 +39,19 @@ async function handleRequest(
   }
 
   if (request.method === "GET" && requestUrl.pathname === "/") {
+    const page = renderTestHarnessPage({
+      apiOrigin: config.apiOrigin,
+      publicSiteKey: config.publicSiteKey,
+      action: config.action,
+    });
     response.writeHead(200, {
       "Content-Type": "text/html; charset=utf-8",
       "Cache-Control": "no-store",
+      "Content-Security-Policy": page.contentSecurityPolicy,
       "Referrer-Policy": "no-referrer",
       "X-Content-Type-Options": "nosniff",
     });
-    response.end(
-      renderTestHarnessPage({
-        apiOrigin: config.apiOrigin,
-        publicSiteKey: config.publicSiteKey,
-        action: config.action,
-      }),
-    );
+    response.end(page.html);
     return;
   }
 

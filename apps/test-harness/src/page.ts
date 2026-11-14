@@ -2,29 +2,42 @@ import { randomBytes } from "node:crypto";
 
 import type { TestHarnessAction } from "./config.js";
 
+export type RenderedTestHarnessPage = {
+  html: string;
+  contentSecurityPolicy: string;
+};
+
 export function renderTestHarnessPage(input: {
   apiOrigin: string;
   publicSiteKey: string;
   action: TestHarnessAction;
-}): string {
+}): RenderedTestHarnessPage {
   const nonce = randomBytes(16).toString("base64");
+  const contentSecurityPolicy = [
+    "default-src 'self'",
+    `connect-src 'self' ${input.apiOrigin}`,
+    "img-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
+    `script-src 'nonce-${nonce}'`,
+    "base-uri 'none'",
+    "form-action 'none'",
+    "frame-ancestors 'none'",
+  ].join("; ");
   const config = JSON.stringify({
     apiOrigin: input.apiOrigin,
     publicSiteKey: input.publicSiteKey,
     action: input.action,
   }).replace(/</g, "\\u003c");
 
-  return `<!doctype html>
+  return {
+    contentSecurityPolicy,
+    html: `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta
-      http-equiv="Content-Security-Policy"
-      content="default-src 'self'; connect-src 'self' ${input.apiOrigin}; img-src 'self'; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
-    />
     <title>TraceCAPTCHA test harness</title>
-    <style nonce="${nonce}">
+    <style>
       body { background: #f8fafc; color: #0f172a; font: 16px/1.5 system-ui, sans-serif; margin: 0; }
       main { margin: 0 auto; max-width: 42rem; padding: 2rem 1rem; }
       .notice { background: #e0f2fe; border: 1px solid #7dd3fc; border-radius: .5rem; padding: 1rem; }
@@ -77,5 +90,6 @@ export function renderTestHarnessPage(input: {
       });
     </script>
   </body>
-</html>`;
+</html>`,
+  };
 }

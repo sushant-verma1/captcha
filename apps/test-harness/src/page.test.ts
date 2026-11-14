@@ -10,9 +10,13 @@ test("renders public browser configuration without the private credential", () =
     action: "password_reset",
   });
 
-  assert.match(page, /tc_site_test/);
-  assert.match(page, /\/verify/);
-  assert.match(page, /tracecaptcha-statechange/);
-  assert.doesNotMatch(page, /tc_server_/);
-  assert.match(page, /Browser state is never authorization/);
+  assert.match(page.html, /tc_site_test/);
+  assert.match(page.html, /\/verify/);
+  assert.match(page.html, /tracecaptcha-statechange/);
+  assert.doesNotMatch(page.html, /tc_server_/);
+  assert.match(page.html, /Browser state is never authorization/);
+  assert.doesNotMatch(page.html, /frame-ancestors/);
+  assert.match(page.contentSecurityPolicy, /style-src 'self' 'unsafe-inline'/);
+  assert.match(page.contentSecurityPolicy, /script-src 'nonce-/);
+  assert.match(page.contentSecurityPolicy, /frame-ancestors 'none'/);
 });

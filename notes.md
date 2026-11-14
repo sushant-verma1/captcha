@@ -652,6 +652,24 @@ Do not add agent names, `Co-authored-by` lines, or personal attribution.
 - Verification: six focused unit tests passed for exact-origin acceptance, configuration validation, public-page secret exclusion, fixed server-side action token consumption, malformed-token rejection, and unavailable dependency behavior. Workspace typecheck and build passed; targeted Prettier and diff-whitespace checks passed. No service, browser, database, Redis instance, port, listener, migration, bootstrap record, or credential was started, created, or changed.
 - Follow-up: choose and deploy a dedicated test-frontend hostname, configure its site and private credentials in a server-only secret store, and run bootstrap only after that hostname is known. P10.0 remains [~] pending deployment and human scenarios; P4.3, P9.5, and P10.1 remain [~].
 
+## 2026-11-14: Render test-harness service provisioned
+
+- Contributor role: deployment assistance
+- Area: P10.0 test-harness hosting
+- What changed: created the `tracecaptcha-test-harness` Render web service in Singapore and deployed it from `main` at `https://tracecaptcha-test-harness.onrender.com`. The initial Render build exposed a missing `apps/test-harness` importer in `pnpm-lock.yaml`; declaring the already-served browser SDK as the harness dependency regenerated that importer. The frozen install then passed locally and Render deployed commit `ac79352` successfully. The service's non-secret public-origin setting now exactly matches its public URL.
+- Why: the generated Render hostname is the concrete browser origin required for safe bootstrap and later browser QA. The lockfile repair ensures Render's required frozen dependency install is reproducible.
+- Verification: the initial deploy failed before startup with `ERR_PNPM_PACKAGE_MANAGER_NO_IMPORTER`; after the lockfile repair, Render reported the corrected deploy live. Local frozen install, workspace typecheck/build, harness unit tests, Prettier, and diff-whitespace checks passed before publishing. No browser, local server, database, Redis instance, port, listener, migration, bootstrap record, or real credential was started, created, or changed.
+- Follow-up: run the one-time bootstrap against staging using `tracecaptcha-test-harness.onrender.com` as the allowed hostname, then set the generated public site key and private server credential only in the service's environment configuration and redeploy. The current placeholder credentials make the public page intentionally non-operational. Configure `/health/ready` in the Render Dashboard if application-level HTTP health checks are desired; the available service inventory still reports no configured HTTP health-check path. Confirm Render Key Value uses `noeviction` before exercise. P10.0 remains [~]; P4.3, P9.5, and P10.1 remain [~].
+
+## 2026-11-14: Test-harness CSP corrected for Web Component rendering
+
+- Contributor role: implementation
+- Area: P10.0 browser integration harness
+- What changed: changed the harness Content Security Policy to allow inline styles only, which the existing Web Component requires for its Shadow DOM and canvas sizing. Scripts remain nonce-restricted. Moved `frame-ancestors 'none'` from a browser-ignored page meta tag into the HTTP response header, where browsers enforce it.
+- Why: the strict style nonce blocked the component's runtime styles before the user could draw, causing the accessible fallback state. This was a presentation/integration failure, not evidence that the server trace policy is too strict.
+- Verification: added page-render coverage for public-key-only output, no private credential, the style policy, nonce-restricted scripts, and header-only frame-ancestor protection. No browser, local service, database, Redis instance, port, listener, migration, bootstrap record, or credential was started, created, or changed.
+- Follow-up: publish this harness correction, then repeat the browser trace test before drawing conclusions about trace thresholds. P10.0 remains [~]; P4.3, P9.5, and P10.1 remain [~].
+
 ### YYYY-MM-DD — Short decision title
 
 - Contributor role:
