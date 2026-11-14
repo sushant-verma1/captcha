@@ -511,6 +511,38 @@ A task may be split further if it cannot be reviewed or completed as one focused
 
 **Depends on:** all required tasks above.
 
+### P10.0 — Build a minimal end-to-end test harness [~]
+
+**Goal:** validate the deployed browser-to-backend verification flow before
+claiming production readiness. This is a focused test surface, not a customer
+dashboard or a second product interface.
+
+- [ ] Choose one dedicated test-frontend hostname before bootstrap. Register
+      that exact lowercase hostname as the first site identifier; it must be the
+      browser application's origin, never the TraceCAPTCHA API hostname.
+- [x] Create one test page that uses only the public site key to request a
+      decision, displays the existing framework-neutral component when challenged,
+      and renders only safe `allow`, `retry`, `cooldown`, `block`, and
+      `unavailable` states.
+- [x] Add a minimal trusted test-backend verification handler. Keep the private
+      server credential in its server-side secret store; verify and atomically
+      consume the returned token for the expected action before showing an
+      authorized test outcome.
+- [x] Keep the page out of product scope: no customer administration,
+      analytics dashboard, real account creation, raw trace persistence, or
+      browser-side authorization.
+- [ ] Use the harness to execute the P4.3, P9.5, and P10.1 human test cases
+      across the documented browser, input-device, keyboard, focus, and
+      screen-reader scenarios.
+- [x] Document the test origin, server-side secret ownership, and teardown
+      procedure without recording credentials, tokens, raw traces, or user data.
+
+**Done when:** a deployed test frontend and its trusted test backend demonstrate
+that a real browser flow can obtain a server-authorized token and that the
+backend can verify and consume it. This establishes an integration test surface
+for P10.1; it does not complete P4.3, P9.5, P10.1, threshold calibration, or
+the production release gate.
+
 ### P10.1 — Run end-to-end scenarios [~]
 
 - [ ] Low-risk action is allowed without showing a challenge.
@@ -541,6 +573,7 @@ A task may be split further if it cannot be reviewed or completed as one focused
 - The API runtime remains alive after a successful listener startup; startup-failure cleanup remains contained in the error path. Render deployment configuration and database/site bootstrap remain operational work, not release-gate completion.
 - The aggregate-metric migration supplies the composite site/customer uniqueness required by its scoped foreign key; it must be applied with the remaining deployment migrations before metrics are available.
 - A server-only one-time bootstrap CLI now creates the first customer, environment, site, allowed web hostname, credential pair, and active version-one policies in one transaction. It remains an operator workflow: it must be run from a trusted environment with an explicitly confirmed configuration and a secure new credential-output file; it is not a browser or HTTP API.
+- P10.0 is the next planned work: build a deliberately minimal test frontend and trusted verification handler after choosing one real test-frontend hostname. Do not bootstrap an arbitrary hostname merely to unblock implementation.
 
 ## Success measures
 

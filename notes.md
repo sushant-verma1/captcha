@@ -633,6 +633,25 @@ Do not add agent names, `Co-authored-by` lines, or personal attribution.
 - Verification: focused bootstrap unit tests passed for successful transactional provisioning, existing-customer refusal, credential-file failure rollback, explicit confirmation, and hostname validation. The full compiled API unit suite passed (79 tests). API TypeScript no-emit typecheck and emitting build passed; targeted Prettier and diff-whitespace checks passed. No local service, database, browser, port, listener, or migration was started or applied.
 - Follow-up: a trusted operator must run the built command exactly once against staging, store the generated private server credential in the customer backend's secret manager, configure only the public site key in browser integration, and securely remove the transient output file after transfer. Do not paste connection URLs or generated credentials into chat. P4.3 and P9.5 remain [~] pending documented human browser/accessibility QA; P10.1 remains [~] pending calibration and release-gate scenarios.
 
+## 2026-11-14: Minimal test-harness work planned
+
+- Contributor role: planning
+- Area: P10.0 end-to-end test harness
+- What changed: added P10.0 to plan.md. The next work is a deliberately narrow test frontend plus trusted test-backend verification handler: the browser will use only a public site key to request decisions and render the existing component, while the server-side handler will hold the private credential and atomically verify/consume returned tokens. The planned surface excludes administration, analytics, real account creation, raw-trace persistence, and browser-side authorization.
+- Why: the implemented API and browser SDK need a real browser origin and a server-to-server token-consumption path before the required accessibility and end-to-end release-gate scenarios can be meaningfully run. Building a broad dashboard or treating a browser callback as authorization would expand scope and violate the existing trust boundary.
+- Alternatives considered: completing abstract API work first would leave P4.3, P9.5, and P10.1 blocked on the same missing integration surface. A generic customer dashboard is deferred because it is not required to test the authoritative flow.
+- Verification: planning and documentation only; no frontend, backend handler, service, browser, database, listener, port, migration, bootstrap run, or credential was created or changed.
+- Follow-up: choose a real dedicated test-frontend hostname and a trusted server-side secret owner before bootstrap. Do not use the TraceCAPTCHA API hostname or bootstrap a guessed hostname. P4.3 and P9.5 remain [~] pending human QA; P10.1 remains [~] pending calibration and release-gate scenarios.
+
+## 2026-11-14: Minimal test harness implemented
+
+- Contributor role: implementation
+- Area: P10.0 end-to-end test harness
+- What changed: added `apps/test-harness`, a small Node web service that serves the existing TraceCAPTCHA Web Component and only its public configuration. It exposes a same-origin token-consumption endpoint that accepts exactly one untrusted browser token, requires the configured page origin, derives the expected action from server configuration, and calls `/v1/tokens/verify` with the private credential and `consume: true`. It returns authorization only after that atomic server-to-server verification. The harness defaults to `password_reset` so the current conservative policy exercises a challenge without creating a real account.
+- Why: the release gate requires a real browser origin and trusted backend consumption path; this creates that surface without adding a dashboard, customer administration, account data, raw trace retention, or browser-side authorization.
+- Verification: six focused unit tests passed for exact-origin acceptance, configuration validation, public-page secret exclusion, fixed server-side action token consumption, malformed-token rejection, and unavailable dependency behavior. Workspace typecheck and build passed; targeted Prettier and diff-whitespace checks passed. No service, browser, database, Redis instance, port, listener, migration, bootstrap record, or credential was started, created, or changed.
+- Follow-up: choose and deploy a dedicated test-frontend hostname, configure its site and private credentials in a server-only secret store, and run bootstrap only after that hostname is known. P10.0 remains [~] pending deployment and human scenarios; P4.3, P9.5, and P10.1 remain [~].
+
 ### YYYY-MM-DD — Short decision title
 
 - Contributor role:
