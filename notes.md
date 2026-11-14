@@ -670,6 +670,15 @@ Do not add agent names, `Co-authored-by` lines, or personal attribution.
 - Verification: added page-render coverage for public-key-only output, no private credential, the style policy, nonce-restricted scripts, and header-only frame-ancestor protection. No browser, local service, database, Redis instance, port, listener, migration, bootstrap record, or credential was started, created, or changed.
 - Follow-up: publish this harness correction, then repeat the browser trace test before drawing conclusions about trace thresholds. P10.0 remains [~]; P4.3, P9.5, and P10.1 remain [~].
 
+## 2026-11-14: Harness diagnostics and trace-visibility improvements
+
+- Contributor role: implementation
+- Area: P4.1 visual feedback and P10.0 browser QA harness
+- What changed: the canvas now renders the public target outline as a lower-opacity dashed guide while a solid, round-capped brush draws the active pointer stroke. The test harness now displays its widget state, server decision, safe reason category, and whether a verification token was issued for server-side consumption. It explicitly states that no numerical score is produced or exposed.
+- Why: a human tester needs immediate visual confirmation of the line being drawn and a safe way to see outcomes such as `retry` with `trace_not_accepted`. Exposing thresholds, detailed measurements, raw traces, or policy rules to the browser would undermine the server-authoritative anti-abuse boundary.
+- Verification: the focused browser-SDK suite (15 tests) and harness-page test passed. Workspace `pnpm run typecheck` and `pnpm run build` passed; targeted Prettier formatting completed. No browser, local service, database, port, listener, migration, or credential operation was started.
+- Follow-up: use the safe result category alongside documented human browser/device/accessibility QA to calibrate the provisional policy. P4.3, P9.5, and P10.1 remain [~]; do not infer production readiness from the harness.
+
 ### YYYY-MM-DD — Short decision title
 
 - Contributor role:

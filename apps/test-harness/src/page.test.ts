@@ -13,6 +13,10 @@ test("renders public browser configuration without the private credential", () =
   assert.match(page.html, /tc_site_test/);
   assert.match(page.html, /\/verify/);
   assert.match(page.html, /tracecaptcha-statechange/);
+  assert.match(page.html, /Safe test diagnostics/);
+  assert.match(page.html, /Reason category/);
+  assert.match(page.html, /not produced or exposed/);
+  assert.match(page.html, /issued; awaiting server-side consumption/);
   assert.doesNotMatch(page.html, /tc_server_/);
   assert.match(page.html, /Browser state is never authorization/);
   assert.doesNotMatch(page.html, /frame-ancestors/);

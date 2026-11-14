@@ -531,6 +531,10 @@ dashboard or a second product interface.
 - [x] Keep the page out of product scope: no customer administration,
       analytics dashboard, real account creation, raw trace persistence, or
       browser-side authorization.
+- [x] Show safe harness diagnostics only: widget state, server decision, safe
+      reason category, and token-handoff status. Do not expose numerical
+      scores, thresholds, detailed trace measurements, raw traces, or policy
+      rules in the browser.
 - [ ] Use the harness to execute the P4.3, P9.5, and P10.1 human test cases
       across the documented browser, input-device, keyboard, focus, and
       screen-reader scenarios.
@@ -573,8 +577,8 @@ the production release gate.
 - The API runtime remains alive after a successful listener startup; startup-failure cleanup remains contained in the error path. Render deployment configuration and database/site bootstrap remain operational work, not release-gate completion.
 - The aggregate-metric migration supplies the composite site/customer uniqueness required by its scoped foreign key; it must be applied with the remaining deployment migrations before metrics are available.
 - A server-only one-time bootstrap CLI now creates the first customer, environment, site, allowed web hostname, credential pair, and active version-one policies in one transaction. It remains an operator workflow: it must be run from a trusted environment with an explicitly confirmed configuration and a secure new credential-output file; it is not a browser or HTTP API.
-- P10.0 is the next planned work: build a deliberately minimal test frontend and trusted verification handler after choosing one real test-frontend hostname. Do not bootstrap an arbitrary hostname merely to unblock implementation.
-- The P10.0 harness is deployed at `https://tracecaptcha-test-harness.onrender.com` in Singapore. Its public-origin configuration now matches that URL, but its site/server credentials are intentional non-operational placeholders until the one-time bootstrap registers this hostname and creates the real credential pair. Do not use it for authorization or release-gate testing yet.
+- P10.0 now has a deployed test frontend and trusted verification handler at `https://tracecaptcha-test-harness.onrender.com` in Singapore. Its configured public origin matches that URL, and its browser/site and server credentials are held in the appropriate deployment configuration. It remains a staging QA surface, not a production authorization or release-readiness claim.
+- The P10.0 harness now presents safe, non-authoritative diagnostics for browser QA, while the canvas renders a subdued dashed guide and a solid live trace brush. This does not expose scoring internals or complete human QA/calibration.
 
 ## Success measures
 

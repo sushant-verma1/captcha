@@ -533,6 +533,7 @@ export function createChallengeCanvasRenderer(
   let widgetState: ChallengeWidgetState = "loading";
   let expiryTimer: ReturnType<typeof setTimeout> | undefined;
   const pointerCollector = new PointerTraceCollector(options.now);
+  let activeStroke: Point[] = [];
   const fallbackButton = options.fallbackButton;
   const resizeObserver =
     typeof ResizeObserver === "undefined"
@@ -582,6 +583,7 @@ export function createChallengeCanvasRenderer(
 
   function setState(state: ChallengeWidgetState): void {
     pointerCollector.reset();
+    activeStroke = [];
     widgetState = state;
     canvas.dataset.tracecaptchaState = state;
     canvas.setAttribute(
@@ -635,6 +637,8 @@ export function createChallengeCanvasRenderer(
 
   function resetTrace(): void {
     pointerCollector.reset();
+    activeStroke = [];
+    draw();
   }
 
   function reset(): void {
@@ -670,7 +674,9 @@ export function createChallengeCanvasRenderer(
       return;
     }
 
+    activeStroke = [point];
     canvas.setPointerCapture(event.pointerId);
+    draw();
     event.preventDefault();
   }
 
@@ -680,12 +686,17 @@ export function createChallengeCanvasRenderer(
     }
 
     for (const coalescedEvent of pointerEvents(event)) {
-      pointerCollector.append(
-        event.pointerId,
-        toChallengePoint(coalescedEvent.clientX, coalescedEvent.clientY),
+      const point = toChallengePoint(
+        coalescedEvent.clientX,
+        coalescedEvent.clientY,
       );
+
+      if (pointerCollector.append(event.pointerId, point) && point !== null) {
+        activeStroke.push(point);
+      }
     }
 
+    draw();
     event.preventDefault();
   }
 
@@ -695,10 +706,14 @@ export function createChallengeCanvasRenderer(
     }
 
     for (const coalescedEvent of pointerEvents(event)) {
-      pointerCollector.append(
-        event.pointerId,
-        toChallengePoint(coalescedEvent.clientX, coalescedEvent.clientY),
+      const point = toChallengePoint(
+        coalescedEvent.clientX,
+        coalescedEvent.clientY,
       );
+
+      if (pointerCollector.append(event.pointerId, point) && point !== null) {
+        activeStroke.push(point);
+      }
     }
 
     const trace = pointerCollector.complete(event.pointerId);
@@ -716,14 +731,20 @@ export function createChallengeCanvasRenderer(
 
   function onPointerCancel(event: PointerEvent): void {
     pointerCollector.cancel(event.pointerId);
+    activeStroke = [];
+    draw();
   }
 
   function onPointerLeave(event: PointerEvent): void {
     pointerCollector.cancel(event.pointerId);
+    activeStroke = [];
+    draw();
   }
 
   function onLostPointerCapture(event: PointerEvent): void {
     pointerCollector.cancel(event.pointerId);
+    activeStroke = [];
+    draw();
   }
 
   function onKeyDown(event: KeyboardEvent): void {
@@ -763,6 +784,7 @@ export function createChallengeCanvasRenderer(
     context.fillStyle = "#f8fafc";
     context.fillRect(0, 0, bounds.width, bounds.height);
     drawPolygon(context, renderData, layout);
+    drawActiveStroke(context, activeStroke, layout);
   }
 
   return {
@@ -888,11 +910,65 @@ function drawPolygon(
   }
 
   context.closePath();
+  context.save();
   context.lineCap = "round";
   context.lineJoin = "round";
+  context.setLineDash([
+    Math.max(5, 8 * layout.scale),
+    Math.max(4, 6 * layout.scale),
+  ]);
   context.lineWidth = Math.max(3, Math.min(8, 5 * layout.scale));
-  context.strokeStyle = "#475569";
+  context.globalAlpha = 0.42;
+  context.strokeStyle = "#64748b";
   context.stroke();
+  context.restore();
+}
+
+function drawActiveStroke(
+  context: CanvasRenderingContext2D,
+  trace: readonly Point[],
+  layout: ChallengeRenderLayout,
+): void {
+  const [firstPoint, ...remainingPoints] = trace;
+
+  if (firstPoint === undefined) {
+    return;
+  }
+
+  context.save();
+  context.beginPath();
+  context.moveTo(
+    layout.offsetX + firstPoint.x * layout.scale,
+    layout.offsetY + firstPoint.y * layout.scale,
+  );
+
+  for (const point of remainingPoints) {
+    context.lineTo(
+      layout.offsetX + point.x * layout.scale,
+      layout.offsetY + point.y * layout.scale,
+    );
+  }
+
+  context.lineCap = "round";
+  context.lineJoin = "round";
+  context.lineWidth = Math.max(4, Math.min(11, 7 * layout.scale));
+  context.strokeStyle = "#0f766e";
+
+  if (remainingPoints.length === 0) {
+    context.fillStyle = "#0f766e";
+    context.arc(
+      layout.offsetX + firstPoint.x * layout.scale,
+      layout.offsetY + firstPoint.y * layout.scale,
+      context.lineWidth / 2,
+      0,
+      2 * Math.PI,
+    );
+    context.fill();
+  } else {
+    context.stroke();
+  }
+
+  context.restore();
 }
 
 function stateMessage(state: ChallengeWidgetState): string {
