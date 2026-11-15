@@ -11,13 +11,16 @@ import type {
  */
 const coverageDistance = 0.025;
 const largeJumpDistance = 0.15;
+const targetCoverageSampleCount = 128;
 
 export type TraceGeometryMetrics = {
   meanDistanceToTarget: number;
   maximumDistanceToTarget: number;
+  pointDistanceAtNinetiethPercentile: number;
   meanTargetDistance: number;
   targetCoverage: number;
   orderConsistency: number;
+  traceTraversalRatio: number;
   startDistanceToTarget: number;
   endDistanceToTarget: number;
   maximumStepDistance: number;
@@ -35,7 +38,11 @@ export function calculateTraceGeometry(
   const traceDistances = traceProjections.map(
     (projection) => projection.distance,
   );
-  const targetDistances = normalized.target.map(
+  const targetSamples = samplePath(
+    normalized.target,
+    targetCoverageSampleCount,
+  );
+  const targetDistances = targetSamples.map(
     (point) => projectPointToPath(point, traceSegments).distance,
   );
   const jumpMetrics = calculateJumpMetrics(
@@ -52,11 +59,14 @@ export function calculateTraceGeometry(
   return {
     meanDistanceToTarget: average(traceDistances),
     maximumDistanceToTarget: Math.max(...traceDistances),
+    pointDistanceAtNinetiethPercentile: percentile(traceDistances, 0.9),
     meanTargetDistance: average(targetDistances),
     targetCoverage:
       targetDistances.filter((distance) => distance <= coverageDistance)
         .length / targetDistances.length,
     orderConsistency: calculateOrderConsistency(traceProjections),
+    traceTraversalRatio:
+      pathLength(normalized.sourceTrace) / pathLength(normalized.target),
     startDistanceToTarget: projectPointToPath(firstTracePoint, targetSegments)
       .distance,
     endDistanceToTarget: projectPointToPath(lastTracePoint, targetSegments)
@@ -197,7 +207,86 @@ function calculateOrderConsistency(
   }
 
   const totalDistance = forwardDistance + backwardDistance;
-  return totalDistance === 0 ? 1 : forwardDistance / totalDistance;
+  return totalDistance === 0
+    ? 1
+    : Math.max(forwardDistance, backwardDistance) / totalDistance;
+}
+
+function samplePath(points: readonly Point[], count: number): Point[] {
+  if (!Number.isInteger(count) || count < 2) {
+    throw new Error("Path sample count must be at least two.");
+  }
+
+  const lengths = cumulativeLengths(points);
+  const totalLength = lengths.at(-1);
+
+  if (totalLength === undefined || totalLength <= 0) {
+    throw new Error("Path must contain measurable segments.");
+  }
+
+  return Array.from({ length: count }, (_, index) => {
+    const distance = (totalLength * index) / (count - 1);
+    const segmentIndex = lengths.findIndex(
+      (segmentEnd, candidateIndex) =>
+        candidateIndex > 0 && segmentEnd >= distance,
+    );
+    const endIndex = segmentIndex === -1 ? points.length - 1 : segmentIndex;
+    const start = points[endIndex - 1];
+    const end = points[endIndex];
+    const startLength = lengths[endIndex - 1];
+    const endLength = lengths[endIndex];
+
+    if (
+      start === undefined ||
+      end === undefined ||
+      startLength === undefined ||
+      endLength === undefined ||
+      endLength <= startLength
+    ) {
+      throw new Error("Path points are invalid.");
+    }
+
+    const ratio = (distance - startLength) / (endLength - startLength);
+    return {
+      x: start.x + (end.x - start.x) * ratio,
+      y: start.y + (end.y - start.y) * ratio,
+    };
+  });
+}
+
+function pathLength(points: readonly Point[]): number {
+  const totalLength = cumulativeLengths(points).at(-1);
+
+  if (totalLength === undefined || totalLength <= 0) {
+    throw new Error("Path must contain measurable segments.");
+  }
+
+  return totalLength;
+}
+
+function cumulativeLengths(points: readonly Point[]): number[] {
+  const lengths = [0];
+
+  for (let index = 1; index < points.length; index += 1) {
+    const previous = points[index - 1];
+    const current = points[index];
+    const previousLength = lengths[index - 1];
+
+    if (
+      previous === undefined ||
+      current === undefined ||
+      previousLength === undefined
+    ) {
+      throw new Error("Path points are invalid.");
+    }
+
+    lengths.push(
+      previousLength +
+        Math.hypot(current.x - previous.x, current.y - previous.y),
+    );
+  }
+
+  return lengths;
 }
 
 function circularDifference(current: number, previous: number): number {
@@ -252,4 +341,20 @@ function average(values: readonly number[]): number {
   }
 
   return values.reduce((total, value) => total + value, 0) / values.length;
+}
+
+function percentile(values: readonly number[], ratio: number): number {
+  if (values.length === 0 || ratio <= 0 || ratio > 1) {
+    throw new Error("Percentile values are invalid.");
+  }
+
+  const sorted = [...values].sort((left, right) => left - right);
+  const index = Math.ceil(sorted.length * ratio) - 1;
+  const value = sorted[index];
+
+  if (value === undefined) {
+    throw new Error("Percentile values are invalid.");
+  }
+
+  return value;
 }

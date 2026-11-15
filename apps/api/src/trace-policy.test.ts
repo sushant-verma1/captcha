@@ -8,9 +8,11 @@ import { assessTrace } from "./trace-policy.js";
 const excellentGeometry: TraceGeometryMetrics = {
   meanDistanceToTarget: 0.01,
   maximumDistanceToTarget: 0.03,
+  pointDistanceAtNinetiethPercentile: 0.02,
   meanTargetDistance: 0.01,
   targetCoverage: 0.95,
   orderConsistency: 0.95,
+  traceTraversalRatio: 1.02,
   startDistanceToTarget: 0.01,
   endDistanceToTarget: 0.01,
   maximumStepDistance: 0.03,
@@ -33,7 +35,7 @@ test("passes excellent geometry without suspicious combined regularity", () => {
 
   assert.deepEqual(assessment, {
     outcome: "pass",
-    policyVersion: "provisional-v1",
+    policyVersion: "provisional-v2",
     calibrationRequired: true,
     geometryReasons: [],
     naturalnessSignals: [],
@@ -91,4 +93,17 @@ test("retries combined regularity and escalates only when it repeats", () => {
     }).outcome,
     "escalate",
   );
+});
+
+test("rejects repeated traversal even when the stroke stays on the target", () => {
+  const assessment = assessTrace(
+    {
+      ...excellentGeometry,
+      traceTraversalRatio: 1.9,
+    },
+    irregularNaturalness,
+  );
+
+  assert.equal(assessment.outcome, "retry");
+  assert.deepEqual(assessment.geometryReasons, ["excessive_traversal"]);
 });

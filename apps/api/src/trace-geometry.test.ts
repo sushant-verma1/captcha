@@ -24,9 +24,11 @@ test("calculates inspectable geometry metrics for an accurate ordered trace", ()
 
   assert.equal(metrics.meanDistanceToTarget, 0);
   assert.equal(metrics.maximumDistanceToTarget, 0);
+  assert.equal(metrics.pointDistanceAtNinetiethPercentile, 0);
   assert.equal(metrics.meanTargetDistance, 0);
   assert.equal(metrics.targetCoverage, 1);
   assert.equal(metrics.orderConsistency, 1);
+  assert.ok(Math.abs(metrics.traceTraversalRatio - 1) < 0.01);
   assert.equal(metrics.startDistanceToTarget, 0);
   assert.equal(metrics.endDistanceToTarget, 0);
   assert.equal(metrics.largeJumpCount, 0);
@@ -54,13 +56,25 @@ test("distinguishes incomplete, offset, reordered, and disconnected traces", () 
       challenge,
     ),
   );
-  const reordered = calculateTraceGeometry(
+  const reverseDirection = calculateTraceGeometry(
     normalizeTrace(
       [
         { x: 80, y: 55, t: 0 },
         { x: 80, y: 165, t: 25 },
         { x: 240, y: 165, t: 50 },
         { x: 240, y: 55, t: 75 },
+        { x: 80, y: 55, t: 100 },
+      ],
+      challenge,
+    ),
+  );
+  const backtracking = calculateTraceGeometry(
+    normalizeTrace(
+      [
+        { x: 80, y: 55, t: 0 },
+        { x: 240, y: 55, t: 25 },
+        { x: 80, y: 55, t: 50 },
+        { x: 80, y: 165, t: 75 },
         { x: 80, y: 55, t: 100 },
       ],
       challenge,
@@ -79,7 +93,8 @@ test("distinguishes incomplete, offset, reordered, and disconnected traces", () 
 
   assert.ok(incomplete.targetCoverage < 0.35);
   assert.ok(offset.meanDistanceToTarget > 0.1);
-  assert.ok(reordered.orderConsistency < 0.1);
+  assert.equal(reverseDirection.orderConsistency, 1);
+  assert.ok(backtracking.orderConsistency < 0.7);
   assert.ok(disconnected.maximumStepDistance > 0.5);
   assert.equal(disconnected.largeJumpCount, 1);
 });

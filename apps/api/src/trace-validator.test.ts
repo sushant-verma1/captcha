@@ -41,12 +41,45 @@ test("captures expected outcomes for accurate and malformed trace categories", (
     { x: 120, y: 205, t: 75 },
     { x: 120, y: 95, t: 100 },
   ]);
-  const reordered = validate([
+  const reverseDirection = validate([
     { x: 80, y: 55, t: 0 },
     { x: 80, y: 165, t: 25 },
     { x: 240, y: 165, t: 50 },
     { x: 240, y: 55, t: 75 },
     { x: 80, y: 55, t: 100 },
+  ]);
+  const backtracking = validate([
+    { x: 80, y: 55, t: 0 },
+    { x: 240, y: 55, t: 25 },
+    { x: 80, y: 55, t: 50 },
+    { x: 80, y: 165, t: 75 },
+    { x: 80, y: 55, t: 100 },
+  ]);
+  const shortOpenTrace = validate([
+    { x: 80, y: 55, t: 0 },
+    { x: 240, y: 55, t: 19 },
+    { x: 240, y: 165, t: 53 },
+    { x: 80, y: 165, t: 101 },
+    { x: 80, y: 80, t: 156 },
+  ]);
+  const roundedTrace = validate([
+    { x: 92, y: 55, t: 0 },
+    { x: 228, y: 55, t: 17 },
+    { x: 240, y: 66, t: 46 },
+    { x: 240, y: 154, t: 92 },
+    { x: 228, y: 165, t: 121 },
+    { x: 92, y: 165, t: 189 },
+    { x: 80, y: 154, t: 205 },
+    { x: 80, y: 66, t: 259 },
+    { x: 92, y: 55, t: 314 },
+  ]);
+  const shortTail = validate([...squareTrace(), { x: 45, y: 55, t: 164 }]);
+  const repeatedOutline = validate([
+    ...squareTrace(),
+    { x: 240, y: 55, t: 139 },
+    { x: 240, y: 165, t: 180 },
+    { x: 80, y: 165, t: 238 },
+    { x: 80, y: 55, t: 301 },
   ]);
   const disconnected = validate([
     { x: 80, y: 55, t: 0 },
@@ -59,7 +92,13 @@ test("captures expected outcomes for accurate and malformed trace categories", (
   assert.equal(duplicate.normalized.sourceTrace.length, 5);
   assert.equal(incomplete.assessment.outcome, "retry");
   assert.equal(offset.assessment.outcome, "retry");
-  assert.equal(reordered.assessment.outcome, "retry");
+  assert.equal(reverseDirection.assessment.outcome, "pass");
+  assert.equal(backtracking.assessment.outcome, "retry");
+  assert.equal(shortOpenTrace.assessment.outcome, "pass");
+  assert.equal(roundedTrace.assessment.outcome, "pass");
+  assert.equal(shortTail.assessment.outcome, "pass");
+  assert.equal(repeatedOutline.assessment.outcome, "retry");
+  assert.ok(repeatedOutline.geometry.traceTraversalRatio > 1.65);
   assert.equal(disconnected.assessment.outcome, "retry");
   assert.ok(disconnected.geometry.largeJumpCount > 0);
 

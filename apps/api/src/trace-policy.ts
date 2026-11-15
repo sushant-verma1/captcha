@@ -1,7 +1,7 @@
 import type { TraceGeometryMetrics } from "./trace-geometry.js";
 import type { TraceNaturalnessMetrics } from "./trace-naturalness.js";
 
-export const traceAcceptancePolicyVersion = "provisional-v1";
+export const traceAcceptancePolicyVersion = "provisional-v2";
 
 /**
  * These server-only thresholds are provisional measurement policy, not public
@@ -10,11 +10,13 @@ export const traceAcceptancePolicyVersion = "provisional-v1";
  * human browser/accessibility QA are complete.
  */
 const provisionalThresholds = {
-  maximumMeanDistanceToTarget: 0.04,
-  maximumPointDistanceToTarget: 0.12,
+  maximumMeanDistanceToTarget: 0.05,
+  maximumNinetiethPercentilePointDistanceToTarget: 0.12,
+  maximumAbsolutePointDistanceToTarget: 0.25,
   minimumTargetCoverage: 0.85,
   minimumOrderConsistency: 0.7,
-  maximumEndpointDistanceToTarget: 0.08,
+  maximumEndpointDistanceToTarget: 0.12,
+  maximumTraceTraversalRatio: 1.65,
 } as const;
 
 export type TraceAssessmentOutcome = "pass" | "retry" | "escalate";
@@ -71,8 +73,10 @@ function geometryFailureReasons(geometry: TraceGeometryMetrics): string[] {
   }
 
   if (
+    geometry.pointDistanceAtNinetiethPercentile >
+      provisionalThresholds.maximumNinetiethPercentilePointDistanceToTarget ||
     geometry.maximumDistanceToTarget >
-    provisionalThresholds.maximumPointDistanceToTarget
+      provisionalThresholds.maximumAbsolutePointDistanceToTarget
   ) {
     reasons.push("trace_deviation");
   }
@@ -94,6 +98,13 @@ function geometryFailureReasons(geometry: TraceGeometryMetrics): string[] {
       provisionalThresholds.maximumEndpointDistanceToTarget
   ) {
     reasons.push("endpoint_offset");
+  }
+
+  if (
+    geometry.traceTraversalRatio >
+    provisionalThresholds.maximumTraceTraversalRatio
+  ) {
+    reasons.push("excessive_traversal");
   }
 
   if (geometry.largeJumpCount > 0) {

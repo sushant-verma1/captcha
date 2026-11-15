@@ -688,6 +688,15 @@ Do not add agent names, `Co-authored-by` lines, or personal attribution.
 - Verification: added a renderer regression test that simulates a mouse drag with two `button: -1` movement events and asserts all four points are submitted. The focused browser-SDK suite passed (16 tests); workspace `pnpm run typecheck` and `pnpm run build` passed. No browser, local service, database, port, listener, migration, or credential operation was started.
 - Follow-up: deploy the correction, then repeat the human tracing scenarios before changing the provisional server policy. P4.3, P9.5, and P10.1 remain [~].
 
+## 2026-11-15: Trace policy tolerance and coverage repair
+
+- Contributor role: implementation
+- Area: P5.4 provisional trace acceptance policy and P10.0 staging-harness calibration
+- What changed: changed the server-only provisional policy to `provisional-v2`. Geometry now treats clockwise and counterclockwise continuous tracing equally, samples the full target outline for coverage instead of measuring only polygon vertices, and uses a robust near-worst distance alongside an absolute large-excursion guard. It permits a small unclosed gap, rounded corners, and a short endpoint tail when the overall stroke follows the target. Added a traversal-length guard so repeated loops and scribbles cannot pass merely by covering the outline.
+- Why: after the mouse drag repair, the user reported that legitimate hand tracing still passed inconsistently. The previous coverage calculation could overstate a shortcut that touched only corners, and its single maximum-distance check could reject a generally correct stroke because of one small correction or tail. The new policy preserves server authority and geometric structure while making ordinary hurried human strokes more usable.
+- Verification: added regression coverage for reverse direction, backtracking, an open-but-nearly-complete outline, rounded corners, a short tail, and a repeated outline. Focused trace-validation tests passed (9 tests); workspace typecheck and build passed.
+- Follow-up: deploy the pointer and policy changes together, then run the documented human mouse/touch/stylus/keyboard/focus/screen-reader staging scenarios. Record outcomes for calibration; P4.3 and P9.5 remain [~], and P10.1 remains [~]. Do not expose scores, measurements, thresholds, raw traces, or policy rules in the browser diagnostics.
+
 ### YYYY-MM-DD — Short decision title
 
 - Contributor role:

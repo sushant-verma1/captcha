@@ -581,6 +581,12 @@ the production release gate.
 - The P10.0 harness now presents safe, non-authoritative diagnostics for browser QA, while the canvas renders a subdued dashed guide and a solid live trace brush. This does not expose scoring internals or complete human QA/calibration.
 - Browser pointer collection accepts normal mouse drag movement, whose Pointer Events use `button: -1` after the initial press. The regression test confirms those intermediate coordinates are drawn and included in the submitted trace; human mouse/touch/stylus QA remains pending.
 
+## Current provisional-policy update
+
+- Trace matching now accepts either continuous drawing direction, a small unclosed gap, rounded corners, and a short correction tail when the stroke otherwise follows the full outline.
+- Complete-outline coverage is sampled along every target segment, not only at polygon vertices. Repeated outline loops, substantial excursions, incomplete outlines, discontinuities, and direction-changing backtracking remain rejection conditions.
+- These are `provisional-v2` staging-calibration changes. They do not complete P4.3, P9.5, or P10.1, and do not authorize production use without documented human browser/accessibility QA and calibration.
+
 ## Success measures
 
 - Legitimate users complete challenges quickly and can recover from failure.
