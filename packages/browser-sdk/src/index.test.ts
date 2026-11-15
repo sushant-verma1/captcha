@@ -5,6 +5,7 @@ import {
   calculateChallengeRenderLayout,
   challengeWidgetStateForVerificationOutcome,
   challengeExpiryDelayMs,
+  createChallengeCanvasRenderer,
   createChallengeVerifier,
   createTraceCaptchaClient,
   mapViewportPointToChallenge,
@@ -340,6 +341,98 @@ test("collects one bounded active pointer trace with elapsed timestamps", () => 
     { x: 12, y: 23, t: 18 },
     { x: 15, y: 27, t: 38 },
   ]);
+});
+
+test("collects and submits mouse drag movement whose button is -1", () => {
+  const originalWindow = globalThis.window;
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: { devicePixelRatio: 1 },
+  });
+
+  const handlers = new Map<string, EventListener>();
+  const context = new Proxy<Record<string, unknown>>(
+    {},
+    {
+      get: (target, property) =>
+        target[property as string] ?? (() => undefined),
+    },
+  ) as unknown as CanvasRenderingContext2D;
+  const canvas = {
+    dataset: {},
+    getBoundingClientRect: () => ({
+      bottom: 220,
+      height: 220,
+      left: 0,
+      right: 320,
+      top: 0,
+      width: 320,
+    }),
+    getContext: () => context,
+    hasPointerCapture: () => false,
+    addEventListener: (name: string, handler: EventListener) => {
+      handlers.set(name, handler);
+    },
+    removeEventListener: () => undefined,
+    setAttribute: () => undefined,
+    setPointerCapture: () => undefined,
+    style: {},
+  } as unknown as HTMLCanvasElement;
+  let now = 0;
+  let submitted: readonly { x: number; y: number; t: number }[] | undefined;
+  const renderer = createChallengeCanvasRenderer(canvas, undefined, {
+    now: () => now,
+    onTraceComplete: (trace) => {
+      submitted = trace;
+    },
+  });
+
+  const pointer = (x: number, y: number, button: number): PointerEvent =>
+    ({
+      button,
+      clientX: x,
+      clientY: y,
+      isPrimary: true,
+      pointerId: 1,
+      pointerType: "mouse",
+      preventDefault: () => undefined,
+    }) as PointerEvent;
+
+  try {
+    renderer.render({
+      canvas: { width: 320, height: 220 },
+      target: {
+        displayPath: [
+          { x: 40, y: 40 },
+          { x: 280, y: 40 },
+          { x: 160, y: 180 },
+        ],
+        kind: "polygon",
+      },
+      version: 1,
+    });
+
+    handlers.get("pointerdown")?.(pointer(40, 40, 0));
+    now = 20;
+    handlers.get("pointermove")?.(pointer(120, 40, -1));
+    now = 40;
+    handlers.get("pointermove")?.(pointer(200, 40, -1));
+    now = 60;
+    handlers.get("pointerup")?.(pointer(280, 40, 0));
+
+    assert.deepEqual(submitted, [
+      { x: 40, y: 40, t: 0 },
+      { x: 120, y: 40, t: 20 },
+      { x: 200, y: 40, t: 40 },
+      { x: 280, y: 40, t: 60 },
+    ]);
+  } finally {
+    renderer.destroy();
+    Object.defineProperty(globalThis, "window", {
+      configurable: true,
+      value: originalWindow,
+    });
+  }
 });
 
 test("bounds oversized traces and discards cancelled or expired pointers", () => {

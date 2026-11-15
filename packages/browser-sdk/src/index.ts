@@ -664,7 +664,7 @@ export function createChallengeCanvasRenderer(
   }
 
   function onPointerDown(event: PointerEvent): void {
-    if (widgetState !== "drawing" || !isPrimarySupportedPointer(event)) {
+    if (widgetState !== "drawing" || !isPrimaryPointerStart(event)) {
       return;
     }
 
@@ -681,7 +681,7 @@ export function createChallengeCanvasRenderer(
   }
 
   function onPointerMove(event: PointerEvent): void {
-    if (widgetState !== "drawing" || !isPrimarySupportedPointer(event)) {
+    if (widgetState !== "drawing" || !isPrimaryPointerEvent(event)) {
       return;
     }
 
@@ -701,7 +701,7 @@ export function createChallengeCanvasRenderer(
   }
 
   function onPointerUp(event: PointerEvent): void {
-    if (widgetState !== "drawing" || !isPrimarySupportedPointer(event)) {
+    if (widgetState !== "drawing" || !isPrimaryPointerEvent(event)) {
       return;
     }
 
@@ -1325,10 +1325,14 @@ export type {
   TraceCaptchaElementStateChange,
 } from "./web-component.js";
 
-function isPrimarySupportedPointer(event: PointerEvent): boolean {
+function isPrimaryPointerStart(event: PointerEvent): boolean {
   return (
     event.isPrimary && !(event.pointerType === "mouse" && event.button !== 0)
   );
+}
+
+function isPrimaryPointerEvent(event: PointerEvent): boolean {
+  return event.isPrimary;
 }
 
 function pointerEvents(event: PointerEvent): readonly PointerEvent[] {

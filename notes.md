@@ -679,6 +679,15 @@ Do not add agent names, `Co-authored-by` lines, or personal attribution.
 - Verification: the focused browser-SDK suite (15 tests) and harness-page test passed. Workspace `pnpm run typecheck` and `pnpm run build` passed; targeted Prettier formatting completed. No browser, local service, database, port, listener, migration, or credential operation was started.
 - Follow-up: use the safe result category alongside documented human browser/device/accessibility QA to calibrate the provisional policy. P4.3, P9.5, and P10.1 remain [~]; do not infer production readiness from the harness.
 
+## 2026-11-15: Mouse drag trace collection repaired
+
+- Contributor role: implementation
+- Area: P4.2 pointer trace collection and P10.0 staging harness diagnosis
+- What changed: split pointer eligibility into a left-button check at pointer start and an active-primary-pointer check for movement and release. Normal mouse `pointermove` events use `button: -1`; they are now retained, painted in the live brush, and submitted as intermediate trace coordinates.
+- Why: the previous shared check treated normal drag movement as a non-left-button action. It left users with only a starting dot and submitted only the press/release points, which made legitimate traces fail geometry validation.
+- Verification: added a renderer regression test that simulates a mouse drag with two `button: -1` movement events and asserts all four points are submitted. The focused browser-SDK suite passed (16 tests); workspace `pnpm run typecheck` and `pnpm run build` passed. No browser, local service, database, port, listener, migration, or credential operation was started.
+- Follow-up: deploy the correction, then repeat the human tracing scenarios before changing the provisional server policy. P4.3, P9.5, and P10.1 remain [~].
+
 ### YYYY-MM-DD — Short decision title
 
 - Contributor role:

@@ -579,6 +579,7 @@ the production release gate.
 - A server-only one-time bootstrap CLI now creates the first customer, environment, site, allowed web hostname, credential pair, and active version-one policies in one transaction. It remains an operator workflow: it must be run from a trusted environment with an explicitly confirmed configuration and a secure new credential-output file; it is not a browser or HTTP API.
 - P10.0 now has a deployed test frontend and trusted verification handler at `https://tracecaptcha-test-harness.onrender.com` in Singapore. Its configured public origin matches that URL, and its browser/site and server credentials are held in the appropriate deployment configuration. It remains a staging QA surface, not a production authorization or release-readiness claim.
 - The P10.0 harness now presents safe, non-authoritative diagnostics for browser QA, while the canvas renders a subdued dashed guide and a solid live trace brush. This does not expose scoring internals or complete human QA/calibration.
+- Browser pointer collection accepts normal mouse drag movement, whose Pointer Events use `button: -1` after the initial press. The regression test confirms those intermediate coordinates are drawn and included in the submitted trace; human mouse/touch/stylus QA remains pending.
 
 ## Success measures
 
