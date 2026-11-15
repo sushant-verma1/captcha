@@ -126,6 +126,41 @@ paths:
           $ref: "#/components/responses/RateLimited"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
+  /challenges/{challengeId}/abandonment:
+    post:
+      tags: [Challenges]
+      operationId: reportChallengeAbandonment
+      summary: Record a best-effort aggregate challenge-abandonment signal
+      description: >
+        Browser lifecycle telemetry only. The server authenticates the public
+        site and active challenge binding, deduplicates the signal while the
+        challenge is live, and records no raw trace, session, token, score, or
+        event identifier. It never consumes or changes verification eligibility.
+      parameters:
+        - $ref: "#/components/parameters/BrowserOrigin"
+        - name: challengeId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      security:
+        - SiteKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChallengeAbandonmentRequest"
+      responses:
+        "202":
+          description: Signal accepted or safely ignored without exposing challenge state.
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/InvalidSiteKey"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
   /tokens/verify:
     post:
       tags: [Tokens]
@@ -435,6 +470,15 @@ components:
           type: string
           enum: [signup, login, password_reset, otp_request]
           description: Present only when valid is true.
+    ChallengeAbandonmentRequest:
+      type: object
+      additionalProperties: false
+      required: [action]
+      description: Contains no user, session, trace, token, score, rule, or event identifier.
+      properties:
+        action:
+          type: string
+          enum: [signup, login, password_reset, otp_request]
     FalsePositiveReportRequest:
       type: object
       additionalProperties: false

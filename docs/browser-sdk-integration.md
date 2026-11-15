@@ -36,6 +36,14 @@ only for the current verification request and are not persisted by this API.
 Customer applications remain responsible for their own notices, retention, and
 accessible recovery flow.
 
+## Aggregate abandonment telemetry
+
+On best-effort widget teardown while a user is still drawing, the component may
+send only the active public challenge ID and protected action to record one
+aggregate abandonment count. This signal never consumes the challenge or
+changes verification eligibility. It contains no session reference, trace,
+token, score, rule, user identifier, or other event identifier.
+
 ## Retrying challenge creation
 
 Direct callers of `POST /v1/challenges` may send an optional `Idempotency-Key`

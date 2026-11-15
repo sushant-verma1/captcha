@@ -1,6 +1,7 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import { ZodError } from "zod";
 
+import type { ChallengeAbandonmentService } from "./challenge-abandonment.js";
 import type { ChallengeCreationService } from "./challenge-creation.js";
 import type { ChallengeVerificationService } from "./challenge-verification.js";
 import type { AppConfig } from "./config.js";
@@ -15,6 +16,7 @@ export type ReadinessCheck = () => boolean | Promise<boolean>;
 export type ServerOptions = {
   readinessChecks?: readonly ReadinessCheck[];
   challengeCreator?: ChallengeCreationService;
+  challengeAbandonmentReporter?: ChallengeAbandonmentService;
   challengeVerifier?: ChallengeVerificationService;
   riskDecisionService?: RiskDecisionService;
   tokenVerifier?: ServerTokenVerificationService;
@@ -26,6 +28,7 @@ export function buildServer(
   {
     readinessChecks = [],
     challengeCreator,
+    challengeAbandonmentReporter,
     challengeVerifier,
     riskDecisionService,
     tokenVerifier,
@@ -96,6 +99,9 @@ export function buildServer(
 
   registerV1Routes(server, {
     ...(challengeCreator === undefined ? {} : { challengeCreator }),
+    ...(challengeAbandonmentReporter === undefined
+      ? {}
+      : { challengeAbandonmentReporter }),
     ...(challengeVerifier === undefined ? {} : { challengeVerifier }),
     ...(riskDecisionService === undefined ? {} : { riskDecisionService }),
     ...(tokenVerifier === undefined ? {} : { tokenVerifier }),

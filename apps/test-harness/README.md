@@ -14,6 +14,40 @@ styles in its Shadow DOM and sets canvas sizing styles at runtime. It keeps
 scripts nonce-restricted and sends `frame-ancestors 'none'` in the HTTP Content
 Security Policy response header.
 
+## Manual staging-QA checklist
+
+Run this only against the deployed staging harness after the API and harness are
+on the intended revision. Record the device/browser, outcome, safe decision and
+reason category, and whether the server-side test result was authorized. Do not
+record or expose tokens, scores, thresholds, measurements, raw traces, secrets,
+or policy rules.
+
+- [ ] **Mouse:** trace the guide clockwise and counterclockwise. Confirm a normal
+      drag paints continuously and reaches the server result (mouse moves report
+      `button: -1` after the press).
+- [ ] **Touch and stylus:** repeat one accurate trace with each supported input
+      type; confirm capture, drawing, and terminal result work without page scroll.
+- [ ] **Permitted human variation:** test a small open gap, rounded/hand-drawn
+      corners, and a short correction tail. Each otherwise complete outline should
+      be accepted and reach the server-side authorized test result.
+- [ ] **Rejected geometry:** submit a dot, a partial straight line, a random
+      scribble, and repeated loops around the guide. Each must receive a recoverable
+      retry/rejection result and must not authorize the test outcome.
+- [ ] **Recovery and accessibility:** use keyboard-only navigation to check
+      visible focus and instructions; use Escape/reset, retry, challenge expiry,
+      and an unavailable API state. With a supported screen reader, confirm status
+      changes and the customer-controlled fallback/recovery control do not trap the
+      user.
+- [ ] **Server decision and result recording:** confirm the diagnostics show
+      only widget state, safe decision, safe reason category, and token-handoff
+      status. For an accepted trace, confirm the server-side `/verify` outcome is
+      authorized only after atomic token verification/consumption; inspect
+      aggregate staging records/logs only for decision/result counts and never for
+      protected scoring data.
+
+These scenarios support calibration only. They do not complete P4.3, P9.5, or
+P10.1, and they do not establish production readiness.
+
 ## Configuration
 
 Set these server-side environment variables when deploying the harness. Do not

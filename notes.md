@@ -697,6 +697,42 @@ Do not add agent names, `Co-authored-by` lines, or personal attribution.
 - Verification: added regression coverage for reverse direction, backtracking, an open-but-nearly-complete outline, rounded corners, a short tail, and a repeated outline. Focused trace-validation tests passed (9 tests); workspace typecheck and build passed.
 - Follow-up: deploy the pointer and policy changes together, then run the documented human mouse/touch/stylus/keyboard/focus/screen-reader staging scenarios. Record outcomes for calibration; P4.3 and P9.5 remain [~], and P10.1 remains [~]. Do not expose scores, measurements, thresholds, raw traces, or policy rules in the browser diagnostics.
 
+## 2026-11-15: Staging human-QA checklist prepared
+
+- Contributor role: documentation and verification
+- Area: P4.3, P9.5, P10.0, P10.1 staging release gate
+- What changed: added a concise manual staging-QA checklist to the existing test-harness documentation. It covers mouse, touch, and stylus; both continuous tracing directions; tolerated open-gap/rounded-corner/short-tail variation; rejected dots, partial lines, scribbles, and repeated loops; keyboard, focus, reset, retry, expiry, unavailable, and screen-reader recovery; and safe server decision/result recording.
+- Why: the pointer-collection repair and `provisional-v2` trace policy require repeatable human staging evidence before calibration decisions. The checklist makes the safe diagnostic boundary explicit: only widget state, decision, reason category, token-handoff status, and aggregate outcome counts may be observed; protected scoring data remains server-only.
+- Verification: source and regression-test review confirmed normal mouse movement with `button: -1`, safe diagnostics, and the requested provisional-policy behavior. Focused offline browser SDK, trace-policy/geometry/validator, and harness tests passed (32 tests). Workspace typecheck and build passed. The repository-wide Prettier check is blocked by pre-existing formatting warnings in `.serena/memories/*`; scoped formatting and whitespace validation are run before handoff.
+- Follow-up: deploy the API and test harness at the intended source revision, then execute and record the checklist against the hosted harness. P4.3, P9.5, and P10.1 remain [~] pending documented human browser/accessibility QA and calibration; this is not a production-readiness claim.
+
+## 2026-11-15: Staging API and harness redeployed for human QA
+
+- Contributor role: deployment assistance and QA handoff
+- Area: P10.0 staging test harness
+- What changed: manually triggered the Render API and test-harness services from Git commit `8b2c330` (the pointer-collection and `provisional-v2` policy revision). Both services had manual deploys enabled. The API deployed live with repeated configured `/health/ready` HTTP 200 responses; the harness build completed and Render reported it live.
+- Why: human QA must exercise the deployed browser-to-server flow, not a local process or an unverified previous revision.
+- Verification: Render logs confirmed both services checked out `8b2c330`; the API started and passed readiness checks, and the harness build and start completed successfully. No local service, browser, database, port, listener, migration, credential, commit, or push was started or changed. The agent's hosted-browser surface was unavailable, so it did not open a browser or draw/solve the CAPTCHA.
+- Follow-up: a human with access to the hosted harness must execute and record `apps/test-harness/README.md`'s checklist, including mouse, touch, stylus, keyboard, focus, expiry, unavailable, and screen-reader scenarios. P4.3, P9.5, and P10.1 remain [~]; human QA and calibration remain required before any production-readiness assessment.
+
+## 2026-11-15: Aggregate-only challenge abandonment telemetry completed
+
+- Contributor role: implementation
+- Area: P9.4 aggregate observability
+- What changed: added the browser-to-API best-effort abandonment signal. A widget teardown while an active user trace is still in the drawing state sends only the public challenge ID and protected action. The API authenticates the browser site/origin, validates the active challenge binding, deduplicates once with a short-lived Redis marker, and records only the daily aggregate `challenge_abandoned` count. A new forward-only migration expands the metric vocabulary.
+- Why: abandonment is necessary to measure challenge friction, but it must not become a behavioral-event log or affect server-authoritative acceptance. The signal neither consumes nor changes challenge eligibility; mismatched, expired, duplicate, and unavailable observations are safely ignored or fail closed for telemetry.
+- Verification: added API, store, and browser-SDK regression coverage for one-time aggregate recording, binding mismatch, invalid credentials, non-consumption, and public request shape. Focused offline suite passed (31 tests); workspace typecheck and build passed. No local service, database, browser, port, listener, migration, credential, commit, push, or deployment was started or changed.
+- Follow-up: P9.4 is [x]. Apply migration `0008_operational_metric_challenge_abandoned.sql` only through the trusted staging migration workflow before observing this counter in staging. P4.3, P9.5, and P10.1 remain [~] pending human browser/accessibility QA and calibration; this does not support a production-readiness claim.
+
+## 2026-11-15: Plan status reconciled after staging implementation
+
+- Contributor role: project tracking
+- Area: P9.1 and P10.0
+- What changed: corrected stale plan markers. P9.1 now reflects its implemented decision, challenge-creation, and authenticated verification rate limits. The P10.0 dedicated harness-hostname prerequisite now reflects the already deployed exact browser origin.
+- Why: the plan must distinguish completed implementation/deployment prerequisites from the deliberately pending human browser/accessibility and calibration gates.
+- Verification: reconciled against the current implementation, prior staging deployment records, and current plan status. No source behavior, credentials, migration, service, deployment, commit, or push changed.
+- Follow-up: P4.3, P9.5, the P10.0 human-harness run, and P10.1 remain pending documented human QA. P9.4's new migration and source remain undeployed until explicitly authorized.
+
 ### YYYY-MM-DD — Short decision title
 
 - Contributor role:

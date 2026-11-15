@@ -91,11 +91,52 @@ export type ChallengeVerificationOutcome =
   | { kind: "consumed" }
   | { kind: "unavailable" };
 
+export type ChallengeAbandonmentReport = {
+  challenge: Pick<ChallengeResponse, "challengeId" | "action">;
+};
+
 export type ChallengeVerifier = {
   submit(
     submission: ChallengeVerificationSubmission,
   ): Promise<ChallengeVerificationOutcome>;
 };
+
+/**
+ * Sends an aggregate-only, best-effort lifecycle signal. It never authorizes,
+ * cancels, or otherwise changes the server-held challenge.
+ */
+export async function reportChallengeAbandonment(
+  options: TraceCaptchaClientOptions & ChallengeAbandonmentReport,
+): Promise<void> {
+  if (
+    !isUsableClientOptions(options) ||
+    !isUsableChallengeBinding(options.challenge)
+  ) {
+    throw new TraceCaptchaClientError("configuration");
+  }
+
+  const fetchImplementation = options.fetch ?? globalThis.fetch;
+
+  if (fetchImplementation === undefined) {
+    throw new TraceCaptchaClientError("configuration");
+  }
+
+  await fetchImplementation(
+    challengeAbandonmentEndpoint(
+      options.endpoint,
+      options.challenge.challengeId,
+    ),
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-TraceCAPTCHA-Site-Key": options.siteKey.trim(),
+      },
+      body: JSON.stringify({ action: options.challenge.action }),
+      keepalive: true,
+    },
+  );
+}
 
 export type ChallengeWidgetState =
   | "loading"
@@ -1036,6 +1077,21 @@ function challengeVerificationEndpoint(
 
   return new URL(
     `v1/challenges/${encodeURIComponent(challengeId)}/verify`,
+    apiBase,
+  ).toString();
+}
+
+function challengeAbandonmentEndpoint(
+  endpoint: string,
+  challengeId: string,
+): string {
+  const apiBase = new URL(endpoint);
+  apiBase.pathname = apiBase.pathname.endsWith("/")
+    ? apiBase.pathname
+    : `${apiBase.pathname}/`;
+
+  return new URL(
+    `v1/challenges/${encodeURIComponent(challengeId)}/abandonment`,
     apiBase,
   ).toString();
 }

@@ -461,11 +461,11 @@ A task may be split further if it cannot be reviewed or completed as one focused
 
 **Goal:** protect TraceCAPTCHA endpoints and make outcomes observable.
 
-### P9.1 — Add endpoint rate limits [~]
+### P9.1 — Add endpoint rate limits [x]
 
 - [x] Add configurable limits per customer/site and action through the active site/action policy version.
 - [x] Add session and network-based controls where appropriate.
-- [~] Apply limits separately to decisions, challenge creation, and verification. Decisions and challenge creation are enforced; disabled challenge verification still needs its authenticated verification service boundary.
+- [x] Apply limits separately to decisions, challenge creation, and verification through their authenticated service boundaries.
 - [x] Return predictable retry/cooldown behavior.
 
 **Done when:** repeated challenge or verification requests cannot create unbounded work.
@@ -487,10 +487,10 @@ A task may be split further if it cannot be reviewed or completed as one focused
 
 **Done when:** each protected action has documented behavior during API, Redis, or signing-key service failure, while final customer fallback remains outside untrusted browser state.
 
-### P9.4 — Add aggregate observability [~]
+### P9.4 — Add aggregate observability [x]
 
-- [~] Record decision, challenge, completion, retry, expiry, and replay counts. Decision and challenge creation/replay counts are wired; completion/retry/expiry awaits the deliberately disabled verification service.
-- [~] Track challenge completion duration and abandonment. The aggregate store supports duration totals, but no verification or customer-outcome path currently emits them.
+- [x] Record decision, challenge, completion, retry, expiry, replay, and best-effort abandonment counts. Browser abandonment is deduplicated per live challenge and cannot change verification eligibility.
+- [x] Track challenge completion duration and abandonment without retaining raw traces or identifiers.
 - [x] Track false-positive reports and API/dependency health. Authenticated decision and challenge dependency failures increment a generic aggregate-only `dependency_unavailable` bucket; trusted customer backends can record a `false_positive_reported` aggregate for one protected action using a private credential.
 - [x] Keep the observability storage boundary free of raw traces and sensitive risk rules.
 
@@ -517,7 +517,7 @@ A task may be split further if it cannot be reviewed or completed as one focused
 claiming production readiness. This is a focused test surface, not a customer
 dashboard or a second product interface.
 
-- [ ] Choose one dedicated test-frontend hostname before bootstrap. Register
+- [x] Choose one dedicated test-frontend hostname before bootstrap. Register
       that exact lowercase hostname as the first site identifier; it must be the
       browser application's origin, never the TraceCAPTCHA API hostname.
 - [x] Create one test page that uses only the public site key to request a
@@ -538,6 +538,12 @@ dashboard or a second product interface.
 - [ ] Use the harness to execute the P4.3, P9.5, and P10.1 human test cases
       across the documented browser, input-device, keyboard, focus, and
       screen-reader scenarios.
+- [x] Document the concise manual staging-QA checklist in
+      `apps/test-harness/README.md`; it keeps P4.3, P9.5, and P10.1 pending until
+      documented human browser/accessibility QA and calibration are complete.
+- [x] Manually redeploy the staging API and test harness from `8b2c330` before
+      QA. Both services are live; the hosted-browser surface was unavailable to the
+      agent, so the human scenarios remain pending.
 - [x] Document the test origin, server-side secret ownership, and teardown
       procedure without recording credentials, tokens, raw traces, or user data.
 
@@ -571,7 +577,7 @@ the production release gate.
 ## Current implementation status update
 
 - P9.1 is [x]: the authenticated challenge-verification service applies configured site/action and network rate limits before it consumes a challenge. Its policy migration is applied to the staging PostgreSQL deployment.
-- P9.4 remains [~]: decision, challenge creation/replay, verification completion/retry, and observed-expiry counts are wired; accepted/retry traces add aggregate duration totals. A non-identifying abandonment source is still required.
+- P9.4 is [x]: decision, challenge creation/replay, verification completion/retry/observed-expiry, duration, and best-effort abandonment aggregates are wired. Abandonment is deduplicated per live challenge and is never a verification or policy input.
 - P4.3 and P9.5 remain [~] pending documented human browser, device, keyboard, touch/stylus, focus, and screen-reader QA.
 - P10.1 remains [~]: server verification now exists, but provisional thresholds require calibration and the human release-gate scenarios remain pending.
 - The API runtime remains alive after a successful listener startup; startup-failure cleanup remains contained in the error path. Render deployment configuration and database/site bootstrap remain operational work, not release-gate completion.

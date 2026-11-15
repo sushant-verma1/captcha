@@ -11,6 +11,7 @@ import {
   mapViewportPointToChallenge,
   maximumTracePoints,
   PointerTraceCollector,
+  reportChallengeAbandonment,
   requestChallengeAfterDecision,
   submitChallengeTrace,
   TraceCaptchaClientError,
@@ -522,6 +523,33 @@ test("submits only the server-issued challenge binding and trace", async () => {
       { x: 12, y: 24, t: 18 },
     ],
   });
+});
+
+test("reports an aggregate-safe challenge abandonment lifecycle signal", async () => {
+  let requestUrl: string | undefined;
+  let requestInit: RequestInit | undefined;
+
+  await reportChallengeAbandonment({
+    siteKey: "tc_site_test",
+    endpoint: "https://api.example.test/tracecaptcha",
+    challenge: { challengeId: "ch_123", action: "signup" },
+    fetch: async (url, init) => {
+      requestUrl = url;
+      requestInit = init;
+      return { status: 202, json: async () => ({}) };
+    },
+  });
+
+  assert.equal(
+    requestUrl,
+    "https://api.example.test/tracecaptcha/v1/challenges/ch_123/abandonment",
+  );
+  assert.deepEqual(requestInit?.headers, {
+    "Content-Type": "application/json",
+    "X-TraceCAPTCHA-Site-Key": "tc_site_test",
+  });
+  assert.equal(requestInit?.keepalive, true);
+  assert.deepEqual(JSON.parse(String(requestInit?.body)), { action: "signup" });
 });
 
 test("maps only completed server outcomes to widget states", async () => {

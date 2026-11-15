@@ -43,8 +43,8 @@ supported screen readers.
   independent site/action and network rate-limit policy entries.
 - Trace-acceptance thresholds remain provisional and require real
   usability/abuse calibration before production enforcement.
-- Completion, retry, and observed expiry aggregates are recorded; abandonment
-  cannot be measured until an explicit non-identifying source is defined.
+- Completion, retry, observed expiry, duration, and best-effort abandonment
+  signals are deduplicated per live challenge and are not proof of user intent.
 - Aggregate operational metrics cover decision outcomes, challenge
   creation/replay, authenticated dependency unavailability, and one-action
   false-positive reports from trusted customer backends. They do not store raw

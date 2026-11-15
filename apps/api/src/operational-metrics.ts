@@ -11,6 +11,7 @@ export const operationalMetricNames = [
   "challenge_retry",
   "challenge_expired",
   "challenge_replayed",
+  "challenge_abandoned",
   "dependency_unavailable",
   "false_positive_reported",
   "token_verified",

@@ -1,6 +1,7 @@
 import { Pool } from "pg";
 import { createClient } from "redis";
 
+import { ChallengeAbandonmentService } from "./challenge-abandonment.js";
 import { ChallengeCreationService } from "./challenge-creation.js";
 import { ChallengeVerificationService } from "./challenge-verification.js";
 import { createRedisChallengeStore } from "./challenge-store.js";
@@ -35,6 +36,11 @@ const rateLimiter = new RateLimiter(
   new PostgresRateLimitPolicyLookup(database),
 );
 const operationalMetrics = new PostgresOperationalMetricsRecorder(database);
+const challengeAbandonmentReporter = new ChallengeAbandonmentService(
+  credentialLookup,
+  createRedisChallengeStore(redis),
+  operationalMetrics,
+);
 const falsePositiveReporter = new FalsePositiveReportingService(
   credentialLookup,
   operationalMetrics,
@@ -77,6 +83,7 @@ const riskDecisionService = new RiskDecisionService(
 );
 const server = buildServer(config, {
   challengeCreator,
+  challengeAbandonmentReporter,
   challengeVerifier,
   riskDecisionService,
   tokenVerifier: tokenVerificationService,

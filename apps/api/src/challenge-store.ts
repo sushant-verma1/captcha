@@ -9,12 +9,18 @@ export type RedisChallengeClient = {
     options: { NX: true; PX: number },
   ): Promise<string | null>;
   getDel(key: string): Promise<string | null>;
+  get(key: string): Promise<string | null>;
 };
 
 export type ChallengeConsumeResult =
   | { outcome: "consumed"; challenge: ChallengeState }
   | { outcome: "expired" }
   | { outcome: "missing_or_consumed" };
+
+export type ChallengeAbandonmentObservation =
+  | { outcome: "observed"; challenge: ChallengeState }
+  | { outcome: "already_observed" }
+  | { outcome: "missing_or_expired" };
 
 export class RedisChallengeStore {
   public constructor(
@@ -67,6 +73,52 @@ export class RedisChallengeStore {
       challenge: { ...challenge, status: "consumed" },
     };
   }
+
+  /**
+   * Records one best-effort lifecycle observation without consuming or changing
+   * the challenge. The short-lived Redis marker deduplicates browser teardown
+   * notifications; it is not retained operational telemetry.
+   */
+  public async observeAbandonment(
+    challengeId: string,
+    expected: Pick<ChallengeState, "customerId" | "siteId" | "action">,
+  ): Promise<ChallengeAbandonmentObservation> {
+    const serializedChallenge = await this.client.get(
+      challengeKey(challengeId),
+    );
+
+    if (serializedChallenge === null) {
+      return { outcome: "missing_or_expired" };
+    }
+
+    const challenge = parseChallengeState(serializedChallenge);
+
+    if (
+      challenge === null ||
+      Date.parse(challenge.expiresAt) <= this.now().getTime()
+    ) {
+      return { outcome: "missing_or_expired" };
+    }
+
+    if (
+      challenge.customerId !== expected.customerId ||
+      challenge.siteId !== expected.siteId ||
+      challenge.action !== expected.action
+    ) {
+      return { outcome: "missing_or_expired" };
+    }
+
+    const marker = await this.client.set(abandonmentKey(challengeId), "1", {
+      NX: true,
+      PX: Date.parse(challenge.expiresAt) - this.now().getTime(),
+    });
+
+    if (marker === null) {
+      return { outcome: "already_observed" };
+    }
+
+    return { outcome: "observed", challenge };
+  }
 }
 
 export function createRedisChallengeStore(
@@ -79,6 +131,9 @@ export function createRedisChallengeStore(
     async getDel(key) {
       return client.getDel(key);
     },
+    async get(key) {
+      return client.get(key);
+    },
   });
 }
 
@@ -88,6 +143,10 @@ export function createChallengeExpiry(now: Date = new Date()): string {
 
 function challengeKey(challengeId: string): string {
   return `tracecaptcha:challenge:${challengeId}`;
+}
+
+function abandonmentKey(challengeId: string): string {
+  return `tracecaptcha:challenge-abandonment:${challengeId}`;
 }
 
 function parseChallengeState(value: string): ChallengeState | null {

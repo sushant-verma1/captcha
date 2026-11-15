@@ -93,6 +93,12 @@ export const verifyChallengeRequestSchema = z
   })
   .strict();
 
+export const challengeAbandonmentRequestSchema = z
+  .object({
+    action: protectedActionSchema,
+  })
+  .strict();
+
 export const verifyTokenRequestSchema = z
   .object({
     token: z.string().min(1),

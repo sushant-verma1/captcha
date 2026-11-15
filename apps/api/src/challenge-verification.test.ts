@@ -358,6 +358,10 @@ class InMemoryRedis {
     this.values.delete(key);
     return value;
   }
+
+  public async get(key: string): Promise<string | null> {
+    return this.values.get(key) ?? null;
+  }
 }
 
 class InMemoryRateLimitCounters implements RateLimitCounterStore {

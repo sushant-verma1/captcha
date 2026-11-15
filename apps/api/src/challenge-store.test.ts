@@ -53,6 +53,31 @@ test("rejects expired challenges even when their Redis value has not yet been re
   });
 });
 
+test("observes abandonment once without consuming the active challenge", async () => {
+  const clock = new MutableClock("2026-11-10T12:00:00.000Z");
+  const store = new RedisChallengeStore(new InMemoryRedisClient(), clock.now);
+  const challenge = createChallenge(clock.now());
+  assert.equal(await store.save(challenge), true);
+
+  assert.deepEqual(
+    await store.observeAbandonment(challenge.id, {
+      customerId: challenge.customerId,
+      siteId: challenge.siteId,
+      action: challenge.action,
+    }),
+    { outcome: "observed", challenge },
+  );
+  assert.deepEqual(
+    await store.observeAbandonment(challenge.id, {
+      customerId: challenge.customerId,
+      siteId: challenge.siteId,
+      action: challenge.action,
+    }),
+    { outcome: "already_observed" },
+  );
+  assert.equal((await store.consume(challenge.id)).outcome, "consumed");
+});
+
 class MutableClock {
   private current: Date;
 
@@ -89,6 +114,10 @@ class InMemoryRedisClient {
     const value = this.values.get(key) ?? null;
     this.values.delete(key);
     return value;
+  }
+
+  public async get(key: string): Promise<string | null> {
+    return this.values.get(key) ?? null;
   }
 }
 

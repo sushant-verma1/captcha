@@ -11,6 +11,7 @@ import {
   createChallengeVerifier,
   createChallengeCanvasRenderer,
   createTraceCaptchaClient,
+  reportChallengeAbandonment,
   requestChallengeAfterDecision,
   TraceCaptchaClientError,
   type ChallengeCanvasRenderer,
@@ -155,6 +156,7 @@ export class TraceCaptchaElement extends BrowserElementBase {
   }
 
   public disconnectedCallback(): void {
+    this.reportActiveChallengeAbandonment();
     this.cancelActiveRun();
     this.renderer?.destroy();
     this.renderer = undefined;
@@ -176,6 +178,7 @@ export class TraceCaptchaElement extends BrowserElementBase {
       throw new TraceCaptchaClientError("destroyed");
     }
 
+    this.reportActiveChallengeAbandonment();
     this.cancelActiveRun();
     const run = this.activeRun;
     this.latestDecision = undefined;
@@ -236,6 +239,7 @@ export class TraceCaptchaElement extends BrowserElementBase {
       return;
     }
 
+    this.reportActiveChallengeAbandonment();
     this.permanentlyDestroyed = true;
     this.cancelActiveRun();
     this.renderer?.destroy();
@@ -265,6 +269,24 @@ export class TraceCaptchaElement extends BrowserElementBase {
     this.verificationAbortController = undefined;
     this.client?.destroy();
     this.client = undefined;
+  }
+
+  private reportActiveChallengeAbandonment(): void {
+    const challenge = this.activeChallenge;
+
+    if (challenge === undefined || this.latestWidgetState !== "drawing") {
+      return;
+    }
+
+    this.activeChallenge = undefined;
+    void reportChallengeAbandonment({
+      siteKey: this.siteKey,
+      endpoint: this.endpoint,
+      challenge,
+      ...(this.fetchImplementation === undefined
+        ? {}
+        : { fetch: this.fetchImplementation }),
+    }).catch(() => undefined);
   }
 
   private ensureRenderer(): ChallengeCanvasRenderer {
@@ -387,6 +409,8 @@ export class TraceCaptchaElement extends BrowserElementBase {
     ) {
       return;
     }
+
+    this.activeChallenge = undefined;
 
     const abortController = new AbortController();
     this.verificationAbortController = abortController;

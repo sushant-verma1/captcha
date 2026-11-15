@@ -162,6 +162,9 @@ test("records a generic aggregate metric when authenticated challenge storage is
       async getDel() {
         return null;
       },
+      async get() {
+        return null;
+      },
     }),
     () => new Date("2026-11-11T12:00:00.000Z"),
     undefined,

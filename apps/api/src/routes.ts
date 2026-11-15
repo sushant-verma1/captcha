@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import type { ChallengeAbandonmentService } from "./challenge-abandonment.js";
 import type { ChallengeCreationService } from "./challenge-creation.js";
 import type { ChallengeVerificationService } from "./challenge-verification.js";
 import { ApiError } from "./errors.js";
@@ -7,6 +8,7 @@ import type { RiskDecisionService } from "./risk-decision.js";
 import type { ServerTokenVerificationService } from "./server-token-verification.js";
 import {
   challengeIdParamsSchema,
+  challengeAbandonmentRequestSchema,
   createChallengeRequestSchema,
   decisionRequestSchema,
   falsePositiveReportRequestSchema,
@@ -70,12 +72,14 @@ export function registerV1Routes(
   server: FastifyInstance,
   {
     challengeCreator,
+    challengeAbandonmentReporter,
     challengeVerifier,
     riskDecisionService,
     tokenVerifier,
     falsePositiveReporter,
   }: {
     challengeCreator?: ChallengeCreationService;
+    challengeAbandonmentReporter?: ChallengeAbandonmentService;
     challengeVerifier?: ChallengeVerificationService;
     riskDecisionService?: RiskDecisionService;
     tokenVerifier?: ServerTokenVerificationService;
@@ -122,6 +126,28 @@ export function registerV1Routes(
 
   server.options(
     "/v1/challenges/:challengeId/verify",
+    async (request, reply) => {
+      const origin = request.headers.origin;
+
+      if (typeof origin !== "string") {
+        return reply.status(400).send();
+      }
+
+      return reply
+        .header("Access-Control-Allow-Origin", origin)
+        .header(
+          "Access-Control-Allow-Headers",
+          "Content-Type, X-TraceCAPTCHA-Site-Key",
+        )
+        .header("Access-Control-Allow-Methods", "POST, OPTIONS")
+        .header("Vary", "Origin")
+        .status(204)
+        .send();
+    },
+  );
+
+  server.options(
+    "/v1/challenges/:challengeId/abandonment",
     async (request, reply) => {
       const origin = request.headers.origin;
 
@@ -352,6 +378,48 @@ export function registerV1Routes(
       .header("Vary", "Origin")
       .send(result.response);
   });
+
+  server.post(
+    "/v1/challenges/:challengeId/abandonment",
+    async (request, reply) => {
+      const siteKey = requireSiteKey(request.headers);
+      const { challengeId } = challengeIdParamsSchema.parse(request.params);
+      const body = challengeAbandonmentRequestSchema.parse(request.body);
+
+      if (challengeAbandonmentReporter === undefined) {
+        return notImplemented();
+      }
+
+      const result = await challengeAbandonmentReporter.report({
+        siteKey,
+        origin: request.headers.origin,
+        challengeId,
+        action: body.action,
+      });
+
+      if (result.outcome === "invalid_site") {
+        throw new ApiError(
+          401,
+          "invalid_site_key",
+          "The site key is missing or invalid.",
+        );
+      }
+
+      if (result.outcome === "unavailable") {
+        throw new ApiError(
+          503,
+          "service_unavailable",
+          "Verification is temporarily unavailable. Please try again.",
+        );
+      }
+
+      return reply
+        .header("Access-Control-Allow-Origin", request.headers.origin)
+        .header("Vary", "Origin")
+        .status(202)
+        .send();
+    },
+  );
 
   server.post("/v1/tokens/verify", async (request) => {
     const secretKey = requireSecretKey(request.headers);
